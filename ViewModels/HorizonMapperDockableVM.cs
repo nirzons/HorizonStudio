@@ -16,6 +16,10 @@ using NINA.Core.Model.Equipment;
 using NINA.Core.Utility;
 using NINA.Equipment.Equipment.MyCamera;
 using NINA.Equipment.Equipment.MyTelescope;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows.Media.Imaging;
+using System.Linq;
 using NirZonshine.NINA.HorizonVisualMapper.Domain;
 using NirZonshine.NINA.HorizonVisualMapper.Services;
 using NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands;
@@ -32,8 +36,11 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
 
         private readonly SettingsManager _settingsManager;
         private readonly SafetyManager _safetyManager;
+        private readonly IWebcamService _webcamService;
 
         private ImageSource _lastFrame;
+        private DeviceDescriptor _selectedWebcam;
+        private WebcamState _currentWebcamState = WebcamState.Disconnected;
         private string _logs = "[System] Welcome to Horizon Visual Mapper. Select camera to begin.";
         private bool _isRunning = false;
         internal int TaskExecutingFlag = 0;
@@ -101,6 +108,22 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
 
             _mappingCommands = new MappingCommands(this, _telescopeMediator);
             _mountJogCommands = new MountJogCommands(this, _telescopeMediator, _safetyManager, _profileService);
+
+            _webcamService = new WebcamService();
+            _webcamService.StateChanged += WebcamService_StateChanged;
+
+            StartWebcamCommand = new RelayCommand(async _ => await StartWebcamAsync(), _ => CanStartWebcam);
+            StopWebcamCommand = new RelayCommand(_ => StopWebcam(), _ => CanStopWebcam);
+            RefreshWebcamsCommand = new RelayCommand(_ => RefreshWebcams());
+
+            RefreshWebcams();
+            var savedPath = _settingsManager.SelectedUvcCamera;
+            if (!string.IsNullOrEmpty(savedPath)) {
+                SelectedWebcam = AvailableWebcams.FirstOrDefault(w => string.Equals(w.DevicePath, savedPath, StringComparison.OrdinalIgnoreCase));
+            }
+            if (SelectedWebcam == null && AvailableWebcams.Count > 0) {
+                SelectedWebcam = AvailableWebcams[0];
+            }
         }
 
         private void SettingsManager_PropertyChanged(object sender, PropertyChangedEventArgs e) {
@@ -236,6 +259,50 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             }
         }
 
+        public ObservableCollection<DeviceDescriptor> AvailableWebcams { get; } = new ObservableCollection<DeviceDescriptor>();
+
+        public DeviceDescriptor SelectedWebcam {
+            get => _selectedWebcam;
+            set {
+                if (_selectedWebcam != value) {
+                    _selectedWebcam = value;
+                    RaisePropertyChanged(nameof(SelectedWebcam));
+                    _settingsManager.SelectedUvcCamera = _selectedWebcam?.DevicePath ?? string.Empty;
+                    RaisePropertyChanged(nameof(CanStartWebcam));
+                }
+            }
+        }
+
+        public WebcamState CurrentWebcamState {
+            get => _currentWebcamState;
+            set {
+                if (_currentWebcamState != value) {
+                    _currentWebcamState = value;
+                    RaisePropertyChanged(nameof(CurrentWebcamState));
+                    RaisePropertyChanged(nameof(IsWebcamActive));
+                    RaisePropertyChanged(nameof(CanStartWebcam));
+                    RaisePropertyChanged(nameof(CanStopWebcam));
+                    RaisePropertyChanged(nameof(WebcamStatusIndicatorColor));
+                }
+            }
+        }
+
+        public bool IsWebcamActive => CurrentWebcamState == WebcamState.Streaming;
+
+        public bool CanStartWebcam => SelectedWebcam != null && (CurrentWebcamState == WebcamState.Disconnected || CurrentWebcamState == WebcamState.Error);
+        public bool CanStopWebcam => CurrentWebcamState == WebcamState.Streaming || CurrentWebcamState == WebcamState.Connecting;
+
+        public Brush WebcamStatusIndicatorColor {
+            get {
+                switch (CurrentWebcamState) {
+                    case WebcamState.Streaming: return StatusSuccessColor;
+                    case WebcamState.Connecting: return StatusProgressColor;
+                    case WebcamState.Error: return StatusFailureColor;
+                    default: return StatusIdleColor;
+                }
+            }
+        }
+
         public string Logs {
             get => _logs;
             set {
@@ -328,7 +395,85 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         
         public ICommand HomeMountCommand => _mountJogCommands.HomeMountCommand;
 
+        public ICommand StartWebcamCommand { get; }
+        public ICommand StopWebcamCommand { get; }
+        public ICommand RefreshWebcamsCommand { get; }
+
+        private async Task StartWebcamAsync() {
+            if (SelectedWebcam == null) return;
+            Log($"[System] Connecting to webcam: {SelectedWebcam.Name}...");
+            try {
+                await _webcamService.StartCaptureAsync(SelectedWebcam.DevicePath, OnFrameCaptured);
+            } catch (Exception ex) {
+                Log($"[ERROR] Failed to start webcam capture: {ex.Message}");
+            }
+        }
+
+        private void StopWebcam() {
+            Log("[System] Stopping webcam stream...");
+            _webcamService.StopCapture();
+            LastFrame = null;
+        }
+
+        public void RefreshWebcams() {
+            AvailableWebcams.Clear();
+            var cameras = _webcamService.GetAvailableCameras();
+            foreach (var camera in cameras) {
+                AvailableWebcams.Add(camera);
+            }
+            Log($"[System] Discovered {AvailableWebcams.Count} available webcam(s).");
+            
+            // Auto-select first camera if none is selected
+            if (SelectedWebcam == null && AvailableWebcams.Count > 0) {
+                SelectedWebcam = AvailableWebcams[0];
+            } else if (SelectedWebcam != null) {
+                var matching = AvailableWebcams.FirstOrDefault(w => string.Equals(w.DevicePath, SelectedWebcam.DevicePath, StringComparison.OrdinalIgnoreCase));
+                if (matching == null) {
+                    SelectedWebcam = AvailableWebcams.Count > 0 ? AvailableWebcams[0] : null;
+                } else {
+                    SelectedWebcam = matching;
+                }
+            }
+            RaisePropertyChanged(nameof(CanStartWebcam));
+        }
+
+        private void OnFrameCaptured(byte[] frameData) {
+            if (frameData == null || frameData.Length == 0) return;
+
+            try {
+                using (var ms = new MemoryStream(frameData)) {
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.StreamSource = ms;
+                    bitmap.EndInit();
+                    bitmap.Freeze(); // Freeze to allow cross-thread UI access
+
+                    System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
+                        LastFrame = bitmap;
+                    }));
+                }
+            } catch (Exception ex) {
+                Logger.Debug($"[Horizon Visual Mapper] Frame decoding failed: {ex.Message}");
+            }
+        }
+
+        private void WebcamService_StateChanged(object sender, WebcamState state) {
+            System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
+                CurrentWebcamState = state;
+                if (state == WebcamState.Streaming) {
+                    Log("[System] Webcam stream active.");
+                } else if (state == WebcamState.Disconnected) {
+                    Log("[System] Webcam disconnected.");
+                } else if (state == WebcamState.Error) {
+                    Log("[ERROR] Webcam connection failed or device was unplugged.");
+                    LastFrame = null;
+                }
+            }));
+        }
+
         public void Dispose() {
+            try { _webcamService?.Dispose(); } catch { }
             try { _mappingCommands?.StopMapping(); } catch { }
             try { _statusTimer?.Stop(); } catch { }
             try { _safetyManager?.Dispose(); } catch { }

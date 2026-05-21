@@ -120,6 +120,16 @@
                     <Grid>
                         <!-- Fallback screen if camera is disabled/loading -->
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsWebcamActive}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
                             <Path Data="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4M4,6V18H20V6H4M11,7A3,3 0 0,1 14,10A3,3 0 0,1 11,13A3,3 0 0,1 8,10A3,3 0 0,1 11,7M18,8A1,1 0 0,1 19,9A1,1 0 0,1 18,10A1,1 0 0,1 17,9A1,1 0 0,1 18,8M5,16H19V17H5V16Z" 
                                   Fill="#3D3D45" Width="48" Height="48" HorizontalAlignment="Center" />
                             <TextBlock Text="UVC Webcam Live Stream" FontSize="13" FontWeight="Bold" Foreground="DarkGray" Margin="0,10,0,2" HorizontalAlignment="Center" />
@@ -135,7 +145,7 @@
                                 <Style TargetType="Grid">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                        <DataTrigger Binding="{Binding IsWebcamActive}" Value="True">
                                             <Setter Property="Visibility" Value="Visible" />
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -159,6 +169,7 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <Grid>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" /> <!-- UVC Webcam Configuration -->
                                 <RowDefinition Height="Auto" /> <!-- Slew buttons -->
                                 <RowDefinition Height="Auto" /> <!-- Setup buttons -->
                                 <RowDefinition Height="Auto" /> <!-- Parameter details -->
@@ -193,8 +204,56 @@
                                 </Style>
                             </Grid.Resources>
 
+                            <!-- Section 0: UVC Webcam Configuration -->
+                            <Border Grid.Row="0" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+                                <StackPanel Orientation="Vertical">
+                                    <!-- Webcam Header with Dot Status Indicator -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="UVC Webcam Configuration" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" VerticalAlignment="Center" />
+                                        
+                                        <!-- Webcam State Status Badge -->
+                                        <Border Grid.Column="1" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="6,2" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse Width="6" Height="6" Fill="{Binding WebcamStatusIndicatorColor}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding CurrentWebcamState}" FontSize="9.5" FontWeight="SemiBold" Foreground="{Binding WebcamStatusIndicatorColor}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Camera Chooser Dropdown and Refresh Button -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" ItemsSource="{Binding AvailableWebcams}" SelectedItem="{Binding SelectedWebcam}" Height="28" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" VerticalContentAlignment="Center">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" Foreground="White" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <Button Grid.Column="1" Command="{Binding RefreshWebcamsCommand}" Content="🔄" Width="28" Height="28" Margin="6,0,0,0" ToolTip="Refresh available webcams list" Background="#2A2A35" Foreground="White" FontWeight="Bold" Cursor="Hand" />
+                                    </Grid>
+
+                                    <!-- Start / Stop Stream Actions -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Start Video Feed" Command="{Binding StartWebcamCommand}" Height="28" Background="#6366F1" Margin="0,0,4,0" FontSize="11" />
+                                        <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Stop Video Feed" Command="{Binding StopWebcamCommand}" Height="28" Background="#EF4444" Margin="4,0,0,0" FontSize="11" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Section 1: Main Active Mapping Controls -->
-                            <Grid Grid.Row="0" Margin="0,0,0,12">
+                            <Grid Grid.Row="1" Margin="0,0,0,12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -217,7 +276,7 @@
                             </Grid>
 
                             <!-- Section 2: Virtual Alt-Az Jogging Panel -->
-                            <StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,0,0,12">
+                            <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,0,0,12">
                                 <TextBlock Text="Virtual Alt-Az Jogging" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,6" />
                                 
                                 <Grid Width="160" Height="100" HorizontalAlignment="Center">
@@ -249,7 +308,7 @@
                             </StackPanel>
 
                             <!-- Section 3: Hardware Parameters & Safety Checklist -->
-                            <Grid Grid.Row="2" Margin="0,0,0,8">
+                            <Grid Grid.Row="3" Margin="0,0,0,8">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -296,7 +355,7 @@
                             </Grid>
 
                             <!-- Section 4: Log console console feeds -->
-                            <Border Grid.Row="3" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,4,0,4">
+                            <Border Grid.Row="4" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,4,0,4">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <StackPanel>
                                         <TextBlock Text="System Activity Logs" FontSize="9" FontWeight="Bold" Foreground="Gray" Margin="0,0,0,4" />
