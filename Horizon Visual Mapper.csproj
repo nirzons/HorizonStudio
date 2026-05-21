@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>NirZonshine.NINA.HorizonVisualMapper</RootNamespace>
+    <AssemblyName>NirZonshine.NINA.HorizonVisualMapper</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Version>1.0.0.0</Version>
+    <UseWPF>true</UseWPF>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <DefaultItemExcludes>$(DefaultItemExcludes);scratch\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="NINA.Plugin" Version="3.0.0.2017-beta" />
+    <PackageReference Include="NINA.WPF.Base" Version="3.0.0.2017-beta" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="
+if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot; (
+  mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot;
+)
+if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper&quot; (
+  mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper&quot;
+)
+
+echo &quot;Copying built HVM binaries to 3.0.0 directory&quot;
+xcopy &quot;$(TargetDir)*.*&quot; &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper&quot; /y /i /e
+  " />
+  </Target>
+</Project>
