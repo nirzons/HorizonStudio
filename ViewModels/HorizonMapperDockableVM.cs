@@ -199,9 +199,14 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             set => _settingsManager.SafetyThreshold = value;
         }
 
-        public double StepSizeManual {
-            get => _settingsManager.StepSizeManual;
-            set => _settingsManager.StepSizeManual = value;
+        public double StepSizeAlt {
+            get => _settingsManager.StepSizeAlt;
+            set { _settingsManager.StepSizeAlt = value; OnPropertyChanged(); }
+        }
+
+        public double StepSizeAz {
+            get => _settingsManager.StepSizeAz;
+            set { _settingsManager.StepSizeAz = value; OnPropertyChanged(); }
         }
 
         public bool EnableSolarSafety {
@@ -212,11 +217,6 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         public bool EnableZenithSafety {
             get => _settingsManager.EnableZenithSafety;
             set => _settingsManager.EnableZenithSafety = value;
-        }
-
-        public double BacklashCompensationAmount {
-            get => _settingsManager.BacklashCompensationAmount;
-            set => _settingsManager.BacklashCompensationAmount = value;
         }
 
         public bool HorizonLockEnabled {
@@ -320,6 +320,13 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         public ICommand JogSouthCommand => _mountJogCommands.JogSouthCommand;
         public ICommand JogEastCommand => _mountJogCommands.JogEastCommand;
         public ICommand JogWestCommand => _mountJogCommands.JogWestCommand;
+        
+        public ICommand JogNorthEastCommand => _mountJogCommands.JogNorthEastCommand;
+        public ICommand JogNorthWestCommand => _mountJogCommands.JogNorthWestCommand;
+        public ICommand JogSouthEastCommand => _mountJogCommands.JogSouthEastCommand;
+        public ICommand JogSouthWestCommand => _mountJogCommands.JogSouthWestCommand;
+        
+        public ICommand HomeMountCommand => _mountJogCommands.HomeMountCommand;
 
         public void Dispose() {
             try { _mappingCommands?.StopMapping(); } catch { }

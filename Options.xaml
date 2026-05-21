@@ -232,25 +232,19 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Jog Buttons (Up/Down for Alt, Left/Right for Az) -->
-                                    <Button Grid.Row="0" Grid.Column="1" Content="▲ Alt+" Command="{Binding JogNorthCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" Padding="6,2" />
-                                    <Button Grid.Row="1" Grid.Column="0" Content="◀ Az-" Command="{Binding JogWestCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" Padding="6,2" />
-                                    <Button Grid.Row="1" Grid.Column="2" Content="Az+ ▶" Command="{Binding JogEastCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" Padding="6,2" />
-                                    <Button Grid.Row="2" Grid.Column="1" Content="▼ Alt-" Command="{Binding JogSouthCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" Padding="6,2" />
+                                    <!-- Jog Buttons (Up/Down for Alt, Left/Right for Az, Diagonals) -->
+                                    <Button Grid.Row="0" Grid.Column="1" Content="▲" Command="{Binding JogNorthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt+" />
+                                    <Button Grid.Row="1" Grid.Column="0" Content="◀" Command="{Binding JogWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az-" />
+                                    <Button Grid.Row="1" Grid.Column="2" Content="▶" Command="{Binding JogEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az+" />
+                                    <Button Grid.Row="2" Grid.Column="1" Content="▼" Command="{Binding JogSouthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt-" />
                                     
-                                    <!-- Concentric center indicator showing active status -->
-                                    <Ellipse Grid.Row="1" Grid.Column="1" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse">
-                                                <Setter Property="Fill" Value="Gray" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                                        <Setter Property="Fill" Value="#22C55E" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
+                                    <Button Grid.Row="0" Grid.Column="0" Content="↖" Command="{Binding JogNorthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az-" />
+                                    <Button Grid.Row="0" Grid.Column="2" Content="↗" Command="{Binding JogNorthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az+" />
+                                    <Button Grid.Row="2" Grid.Column="0" Content="↙" Command="{Binding JogSouthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az-" />
+                                    <Button Grid.Row="2" Grid.Column="2" Content="↘" Command="{Binding JogSouthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az+" />
+                                    
+                                    <!-- Center Home Button -->
+                                    <Button Grid.Row="1" Grid.Column="1" Content="⌂" Command="{Binding HomeMountCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2563EB" ToolTip="Home Mount" FontSize="14" />
                                 </Grid>
                             </StackPanel>
 
@@ -267,16 +261,15 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Manual step size -->
+                                <!-- Manual step sizes -->
                                 <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,6">
-                                    <TextBlock Text="Jog Step (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
-                                    <TextBox Text="{Binding StepSizeManual, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+                                    <TextBlock Text="↕ Jog Step Alt (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                                    <TextBox Text="{Binding StepSizeAlt, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
                                 </StackPanel>
 
-                                <!-- Backlash Compensation amount -->
                                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="4,0,4,6">
-                                    <TextBlock Text="Backlash (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
-                                    <TextBox Text="{Binding BacklashCompensationAmount, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+                                    <TextBlock Text="↔ Jog Step Az (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                                    <TextBox Text="{Binding StepSizeAz, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
                                 </StackPanel>
 
                                 <!-- Focal length override -->
@@ -287,9 +280,18 @@
 
                                 <!-- Safety exclusions checklist -->
                                 <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,4,0,6">
-                                    <CheckBox Content="Solar Safety Zone" IsChecked="{Binding EnableSolarSafety, UpdateSourceTrigger=PropertyChanged}" Foreground="#FBBF24" FontSize="9" FontWeight="SemiBold" Margin="0,0,16,0" Cursor="Hand" />
-                                    <CheckBox Content="Zenith Lockout" IsChecked="{Binding EnableZenithSafety, UpdateSourceTrigger=PropertyChanged}" Foreground="#FCA5A5" FontSize="9" FontWeight="SemiBold" Margin="0,0,16,0" Cursor="Hand" />
-                                    <CheckBox Content="Horizon Lock" IsChecked="{Binding HorizonLockEnabled, UpdateSourceTrigger=PropertyChanged}" Foreground="#818CF8" FontSize="9" FontWeight="SemiBold" Cursor="Hand" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0" ToolTip="Enables/disables the 15° Solar proximity lockout.">
+                                        <TextBlock Text="Solar Safety Zone" Foreground="#FBBF24" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                        <CheckBox IsChecked="{Binding EnableSolarSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0" ToolTip="Enables/disables the 85° Zenith proximity lockout.">
+                                        <TextBlock Text="Zenith Lockout" Foreground="#FCA5A5" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                        <CheckBox IsChecked="{Binding EnableZenithSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" ToolTip="Locks altitude to Horizon only (Azimuth sweeps).">
+                                        <TextBlock Text="Horizon Lock" Foreground="#818CF8" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                        <CheckBox IsChecked="{Binding HorizonLockEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Grid>
 

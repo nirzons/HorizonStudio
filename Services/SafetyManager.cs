@@ -89,21 +89,22 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                 }
 
                 // 2. Solar Proximity Check
-                if (_settingsManager.EnableSolarSafety) {
-                    var sunCoords = CalculateSunPosition();
-                    if (sunCoords != null) {
-                        double angularDistance = CalculateAngularDistance(currentAlt, currentAz, sunCoords.Alt, sunCoords.Az);
-                        double threshold = _settingsManager.SafetyThreshold;
+                var sunCoords = CalculateSunPosition();
+                if (sunCoords != null) {
+                    double angularDistance = CalculateAngularDistance(currentAlt, currentAz, sunCoords.Alt, sunCoords.Az);
+                    double threshold = _settingsManager.SafetyThreshold;
 
-                        if (angularDistance < threshold) {
-                            IsSolarSafetyAlert = true;
+                    if (angularDistance < threshold) {
+                        IsSolarSafetyAlert = true;
+                        
+                        if (_settingsManager.EnableSolarSafety) {
                             SafetyMessage = $"[SAFETY EXCLUSION] Solar Proximity Lock active! Mount points {angularDistance:F2}° from the Sun (Threshold: {threshold}°).";
                             SafetyLockoutTriggered?.Invoke(this, "Solar proximity detected");
                             TriggerEmergencyStop();
-                            return;
                         } else {
-                            IsSolarSafetyAlert = false;
+                            SafetyMessage = $"⚠ SOLAR ZONE WARNING: Mount points {angularDistance:F2}° from the Sun. Safety Lockout is DISABLED.";
                         }
+                        return;
                     } else {
                         IsSolarSafetyAlert = false;
                     }

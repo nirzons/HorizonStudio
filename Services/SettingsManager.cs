@@ -19,12 +19,12 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
         private string _binning = "1x1";
         private double _focalLengthOverride = 0.0;
         private double _safetyThreshold = 15.0;
-        private double _stepSizeManual = 1.0;
+        private double _stepSizeAlt = 1.0;
+        private double _stepSizeAz = 1.0;
         private string _selectedUvcCamera = string.Empty;
         private string _activeHorizonFilePath = string.Empty;
         private bool _enableSolarSafety = true;
         private bool _enableZenithSafety = true;
-        private double _backlashCompensationAmount = 0.05;
         private bool _horizonLockEnabled = true;
         private string _calibrationDataJson = string.Empty;
 
@@ -67,9 +67,14 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
             set { if (_safetyThreshold != value) { _safetyThreshold = value; SaveSetting(nameof(SafetyThreshold), value); OnPropertyChanged(); } }
         }
 
-        public double StepSizeManual {
-            get => _stepSizeManual;
-            set { if (_stepSizeManual != value) { _stepSizeManual = value; SaveSetting(nameof(StepSizeManual), value); OnPropertyChanged(); } }
+        public double StepSizeAlt {
+            get => _stepSizeAlt;
+            set { if (_stepSizeAlt != value) { _stepSizeAlt = value; SaveSetting(nameof(StepSizeAlt), value); OnPropertyChanged(); } }
+        }
+
+        public double StepSizeAz {
+            get => _stepSizeAz;
+            set { if (_stepSizeAz != value) { _stepSizeAz = value; SaveSetting(nameof(StepSizeAz), value); OnPropertyChanged(); } }
         }
 
         public string SelectedUvcCamera {
@@ -92,10 +97,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
             set { if (_enableZenithSafety != value) { _enableZenithSafety = value; SaveSetting(nameof(EnableZenithSafety), value); OnPropertyChanged(); } }
         }
 
-        public double BacklashCompensationAmount {
-            get => _backlashCompensationAmount;
-            set { if (_backlashCompensationAmount != value) { _backlashCompensationAmount = value; SaveSetting(nameof(BacklashCompensationAmount), value); OnPropertyChanged(); } }
-        }
+
 
         public bool HorizonLockEnabled {
             get => _horizonLockEnabled;
@@ -117,12 +119,12 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                 _binning = accessor.GetValueString(nameof(Binning), "1x1");
                 _focalLengthOverride = accessor.GetValueDouble(nameof(FocalLengthOverride), 0.0);
                 _safetyThreshold = accessor.GetValueDouble(nameof(SafetyThreshold), 15.0);
-                _stepSizeManual = accessor.GetValueDouble(nameof(StepSizeManual), 1.0);
+                _stepSizeAlt = accessor.GetValueDouble(nameof(StepSizeAlt), 1.0);
+                _stepSizeAz = accessor.GetValueDouble(nameof(StepSizeAz), 1.0);
                 _selectedUvcCamera = accessor.GetValueString(nameof(SelectedUvcCamera), string.Empty);
                 _activeHorizonFilePath = accessor.GetValueString(nameof(ActiveHorizonFilePath), string.Empty);
                 _enableSolarSafety = accessor.GetValueBoolean(nameof(EnableSolarSafety), true);
                 _enableZenithSafety = accessor.GetValueBoolean(nameof(EnableZenithSafety), true);
-                _backlashCompensationAmount = accessor.GetValueDouble(nameof(BacklashCompensationAmount), 0.05);
                 _horizonLockEnabled = accessor.GetValueBoolean(nameof(HorizonLockEnabled), true);
                 _calibrationDataJson = accessor.GetValueString(nameof(CalibrationDataJson), string.Empty);
 
