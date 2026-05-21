@@ -18,6 +18,7 @@ using NINA.Equipment.Equipment.MyCamera;
 using NINA.Equipment.Equipment.MyTelescope;
 using NirZonshine.NINA.HorizonVisualMapper.Domain;
 using NirZonshine.NINA.HorizonVisualMapper.Services;
+using NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands;
 
 namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
 
@@ -35,7 +36,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         private ImageSource _lastFrame;
         private string _logs = "[System] Welcome to Horizon Visual Mapper. Select camera to begin.";
         private bool _isRunning = false;
-        private int _taskExecutingFlag = 0;
+        internal int TaskExecutingFlag = 0;
 
         private double _currentAlt;
         private double _currentAz;
@@ -52,13 +53,14 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         private bool _lastIsCameraConnected;
         private bool _lastIsMountConnected;
 
-        private static readonly Brush StatusIdleColor = CreateFrozenBrush("#72BDFF");
-        private static readonly Brush StatusWarningColor = CreateFrozenBrush("#FBBF24");
-        private static readonly Brush StatusSuccessColor = CreateFrozenBrush("#22C55E");
-        private static readonly Brush StatusFailureColor = CreateFrozenBrush("#EF4444");
-        private static readonly Brush StatusProgressColor = CreateFrozenBrush("#6366F1");
+        internal static readonly Brush StatusIdleColor = CreateFrozenBrush("#72BDFF");
+        internal static readonly Brush StatusWarningColor = CreateFrozenBrush("#FBBF24");
+        internal static readonly Brush StatusSuccessColor = CreateFrozenBrush("#22C55E");
+        internal static readonly Brush StatusFailureColor = CreateFrozenBrush("#EF4444");
+        internal static readonly Brush StatusProgressColor = CreateFrozenBrush("#6366F1");
 
-        private readonly Stack<HorizonNode> _undoStack = new Stack<HorizonNode>();
+        private MappingCommands _mappingCommands;
+        private MountJogCommands _mountJogCommands;
 
         [ImportingConstructor]
         public HorizonMapperDockableVM(IProfileService profileService, ICameraMediator cameraMediator, ITelescopeMediator telescopeMediator, IImagingMediator imagingMediator) : base(profileService) {
@@ -96,6 +98,9 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             group.Children.Add(Geometry.Parse("M6,14 C6,10 8,8 10,14")); // Tree profile
             group.Freeze();
             ImageGeometry = group;
+
+            _mappingCommands = new MappingCommands(this, _telescopeMediator);
+            _mountJogCommands = new MountJogCommands(this, _telescopeMediator, _safetyManager, _profileService);
         }
 
         private void SettingsManager_PropertyChanged(object sender, PropertyChangedEventArgs e) {
@@ -117,7 +122,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
 
         private void SafetyManager_SafetyLockoutTriggered(object sender, string reason) {
             Log($"[SAFETY WARNING] Emergency Lockout Triggered: {reason}. All hardware movements suspended.");
-            StopMapping();
+            _mappingCommands?.StopMapping();
         }
 
         private void StatusTimer_Tick(object sender, EventArgs e) {
@@ -167,7 +172,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         public bool IsCameraConnected => (_currentCameraInfo?.Connected ?? _cameraMediator?.GetInfo()?.Connected ?? false);
         public bool IsMountConnected => (_currentTelescopeInfo?.Connected ?? _telescopeMediator?.GetInfo()?.Connected ?? false);
 
-        public bool CanStart => IsMountConnected && !IsRunning && Interlocked.CompareExchange(ref _taskExecutingFlag, 0, 0) == 0;
+        public bool CanStart => IsMountConnected && !IsRunning && Interlocked.CompareExchange(ref TaskExecutingFlag, 0, 0) == 0;
 
         public double ExposureTime {
             get => _settingsManager.ExposureTime;
@@ -288,7 +293,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             set { _statusIndicatorColor = value; RaisePropertyChanged(nameof(StatusIndicatorColor)); }
         }
 
-        private void SetStatus(string text, Brush color) {
+        internal void SetStatus(string text, Brush color) {
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
                 StatusIndicatorText = text;
                 StatusIndicatorColor = color;
@@ -305,176 +310,19 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
 
         // --- Commands ---
 
-        private ICommand _startMappingCommand;
-        public ICommand StartMappingCommand => _startMappingCommand ??= new RelayCommand(o => StartMapping());
+        public ICommand StartMappingCommand => _mappingCommands.StartMappingCommand;
+        public ICommand StopMappingCommand => _mappingCommands.StopMappingCommand;
+        public ICommand DropPinCommand => _mappingCommands.DropPinCommand;
+        public ICommand UndoPinCommand => _mappingCommands.UndoPinCommand;
+        public ICommand ClearPinsCommand => _mappingCommands.ClearPinsCommand;
 
-        private ICommand _stopMappingCommand;
-        public ICommand StopMappingCommand => _stopMappingCommand ??= new RelayCommand(o => StopMapping());
-
-        private ICommand _dropPinCommand;
-        public ICommand DropPinCommand => _dropPinCommand ??= new RelayCommand(o => DropPin());
-
-        private ICommand _undoPinCommand;
-        public ICommand UndoPinCommand => _undoPinCommand ??= new RelayCommand(o => UndoPin());
-
-        private ICommand _clearPinsCommand;
-        public ICommand ClearPinsCommand => _clearPinsCommand ??= new RelayCommand(o => ClearPins());
-
-        private ICommand _jogNorthCommand;
-        public ICommand JogNorthCommand => _jogNorthCommand ??= new RelayCommand(o => SlewJog(StepSizeManual, 0));
-
-        private ICommand _jogSouthCommand;
-        public ICommand JogSouthCommand => _jogSouthCommand ??= new RelayCommand(o => SlewJog(-StepSizeManual, 0));
-
-        private ICommand _jogEastCommand;
-        public ICommand JogEastCommand => _jogEastCommand ??= new RelayCommand(o => SlewJog(0, StepSizeManual));
-
-        private ICommand _jogWestCommand;
-        public ICommand JogWestCommand => _jogWestCommand ??= new RelayCommand(o => SlewJog(0, -StepSizeManual));
-
-        public void StartMapping() {
-            if (Interlocked.CompareExchange(ref _taskExecutingFlag, 1, 0) != 0) return;
-
-            Log("Suspending sidereal tracking and initiating Horizon Visual Mapping session...");
-            IsRunning = true;
-            SetStatus("Active Mapping", StatusSuccessColor);
-
-            try {
-                if (_telescopeMediator.GetInfo()?.Connected == true) {
-                    _telescopeMediator.SetTrackingEnabled(false);
-                    Log("Sidereal tracking disabled successfully.");
-                }
-            } catch (Exception ex) {
-                Log($"[Warning] Failed to disable sidereal tracking: {ex.Message}");
-            } finally {
-                Interlocked.Exchange(ref _taskExecutingFlag, 0);
-            }
-        }
-
-        public void StopMapping() {
-            if (!IsRunning) return;
-
-            Log("Stopping visual mapping session. Restoring mount tracking state...");
-            IsRunning = false;
-            SetStatus("Ready", StatusIdleColor);
-
-            try {
-                if (_telescopeMediator.GetInfo()?.Connected == true) {
-                    _telescopeMediator.StopSlew();
-                    Log("Mount slews aborted.");
-                }
-            } catch (Exception ex) {
-                Log($"[Error] StopSlew failed: {ex.Message}");
-            }
-        }
-
-        public void DropPin() {
-            if (!IsRunning) {
-                Log("[Error] Cannot drop pin: Mapping session is not active. Click Start first.");
-                return;
-            }
-
-            if (!IsMountConnected) {
-                Log("[Error] Cannot drop pin: Mount is not connected.");
-                return;
-            }
-
-            double alt = _telescopeMediator.GetInfo()?.Altitude ?? 0.0;
-            double az = _telescopeMediator.GetInfo()?.Azimuth ?? 0.0;
-
-            var node = new HorizonNode(az, alt);
-            _undoStack.Push(node);
-
-            LastNodeAlt = alt;
-            LastNodeAz = az;
-            NodeCount = _undoStack.Count;
-            LastNodeText = node.ToString();
-
-            Log($"[Pin Placed] Added Horizon Node - Alt: {alt:F2}°, Az: {az:F2}° (Total: {NodeCount})");
-        }
-
-        public void UndoPin() {
-            if (_undoStack.Count == 0) {
-                Log("[Warning] Undo stack is empty.");
-                return;
-            }
-
-            var removed = _undoStack.Pop();
-            NodeCount = _undoStack.Count;
-
-            if (_undoStack.Count > 0) {
-                var top = _undoStack.Peek();
-                LastNodeAlt = top.Altitude;
-                LastNodeAz = top.Azimuth;
-                LastNodeText = top.ToString();
-            } else {
-                LastNodeAlt = 0.0;
-                LastNodeAz = 0.0;
-                LastNodeText = "None";
-            }
-
-            Log($"[Undo Pin] Removed Horizon Node - Alt: {removed.Altitude:F2}°, Az: {removed.Azimuth:F2}° (Total: {NodeCount})");
-        }
-
-        public void ClearPins() {
-            if (_undoStack.Count == 0) return;
-
-            _undoStack.Clear();
-            NodeCount = 0;
-            LastNodeAlt = 0.0;
-            LastNodeAz = 0.0;
-            LastNodeText = "None";
-
-            Log("[Clear Pins] Removed all horizon nodes from active session.");
-        }
-
-        private void SlewJog(double altOffset, double azOffset) {
-            if (!IsRunning) {
-                Log("[Error] Jogging blocked: Click 'Start Mapping' to initiate the session.");
-                return;
-            }
-
-            if (!IsMountConnected) {
-                Log("[Error] Jogging blocked: Telescope mount is not connected.");
-                return;
-            }
-
-            Task.Run(async () => {
-                try {
-                    double currentAlt = _telescopeMediator.GetInfo()?.Altitude ?? 0.0;
-                    double currentAz = _telescopeMediator.GetInfo()?.Azimuth ?? 0.0;
-
-                    double targetAlt = currentAlt + altOffset;
-                    double targetAz = (currentAz + azOffset + 360.0) % 360.0;
-
-                    // 1. Verify safety limits
-                    if (!_safetyManager.IsTargetPositionSafe(targetAlt, targetAz, out string violation)) {
-                        Log($"[SAFETY BLOCK] Jog rejected: {violation}");
-                        return;
-                    }
-
-                    // 2. Perform backlash compensated slew
-                    Log($"Jogging mount by Alt: {altOffset:F2}°, Az: {azOffset:F2}° -> Target Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
-                    
-                    double lat = _telescopeMediator.GetInfo()?.SiteLatitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Latitude ?? 0.0;
-                    double lon = _telescopeMediator.GetInfo()?.SiteLongitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Longitude ?? 0.0;
-
-                    var topo = new global::NINA.Astrometry.TopocentricCoordinates(
-                        global::NINA.Astrometry.Angle.ByDegree(targetAz),
-                        global::NINA.Astrometry.Angle.ByDegree(targetAlt),
-                        global::NINA.Astrometry.Angle.ByDegree(lat),
-                        global::NINA.Astrometry.Angle.ByDegree(lon)
-                    );
-
-                    await _telescopeMediator.SlewToCoordinatesAsync(topo, CancellationToken.None);
-                } catch (Exception ex) {
-                    Log($"[Error] Slew Jog failed: {ex.Message}");
-                }
-            });
-        }
+        public ICommand JogNorthCommand => _mountJogCommands.JogNorthCommand;
+        public ICommand JogSouthCommand => _mountJogCommands.JogSouthCommand;
+        public ICommand JogEastCommand => _mountJogCommands.JogEastCommand;
+        public ICommand JogWestCommand => _mountJogCommands.JogWestCommand;
 
         public void Dispose() {
-            try { StopMapping(); } catch { }
+            try { _mappingCommands?.StopMapping(); } catch { }
             try { _statusTimer?.Stop(); } catch { }
             try { _safetyManager?.Dispose(); } catch { }
             try { _settingsManager?.Dispose(); } catch { }
