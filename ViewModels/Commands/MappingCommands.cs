@@ -74,6 +74,12 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
                 return;
             }
 
+            if (_telescopeMediator.GetInfo()?.Slewing == true) {
+                _vm.Log("[Error] Cannot drop pin: Telescope is currently slewing.");
+                global::NINA.Core.Utility.Notification.Notification.ShowError("Pin Drop Blocked: Telescope is currently slewing.");
+                return;
+            }
+
             double alt = _vm.CurrentAlt;
             double az = _vm.CurrentAz;
 

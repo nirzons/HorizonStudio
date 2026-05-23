@@ -596,6 +596,15 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         public ICommand HomeMountCommand => _mountJogCommands.HomeMountCommand;
         public ICommand StopMountCommand => _mountJogCommands.StopMountCommand;
 
+        public ICommand JogN2W1Command => _mountJogCommands.JogN2W1Command;
+        public ICommand JogN2E1Command => _mountJogCommands.JogN2E1Command;
+        public ICommand JogN1W2Command => _mountJogCommands.JogN1W2Command;
+        public ICommand JogN1E2Command => _mountJogCommands.JogN1E2Command;
+        public ICommand JogS1W2Command => _mountJogCommands.JogS1W2Command;
+        public ICommand JogS1E2Command => _mountJogCommands.JogS1E2Command;
+        public ICommand JogS2W1Command => _mountJogCommands.JogS2W1Command;
+        public ICommand JogS2E1Command => _mountJogCommands.JogS2E1Command;
+
         public ICommand StartCoAlignmentCommand { get; }
         public ICommand SaveCoAlignmentCommand { get; }
         public ICommand ResetCoAlignmentCommand { get; }

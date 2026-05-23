@@ -37,6 +37,15 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
         
         public ICommand StopMountCommand { get; }
 
+        public ICommand JogN2W1Command { get; }
+        public ICommand JogN2E1Command { get; }
+        public ICommand JogN1W2Command { get; }
+        public ICommand JogN1E2Command { get; }
+        public ICommand JogS1W2Command { get; }
+        public ICommand JogS1E2Command { get; }
+        public ICommand JogS2W1Command { get; }
+        public ICommand JogS2E1Command { get; }
+
         public MountJogCommands(HorizonMapperDockableVM vm, ITelescopeMediator telescopeMediator, SafetyManager safetyManager, IProfileService profileService) {
             _vm = vm;
             _telescopeMediator = telescopeMediator;
@@ -62,6 +71,15 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
             DoubleJogNorthWestCommand = new RelayCommand(o => SlewJog(_vm.StepSizeAlt * 2.0, -_vm.StepSizeAz * 2.0));
             DoubleJogSouthEastCommand = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt * 2.0, _vm.StepSizeAz * 2.0));
             DoubleJogSouthWestCommand = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt * 2.0, -_vm.StepSizeAz * 2.0));
+
+            JogN2W1Command = new RelayCommand(o => SlewJog(_vm.StepSizeAlt * 2.0, -_vm.StepSizeAz));
+            JogN2E1Command = new RelayCommand(o => SlewJog(_vm.StepSizeAlt * 2.0, _vm.StepSizeAz));
+            JogN1W2Command = new RelayCommand(o => SlewJog(_vm.StepSizeAlt, -_vm.StepSizeAz * 2.0));
+            JogN1E2Command = new RelayCommand(o => SlewJog(_vm.StepSizeAlt, _vm.StepSizeAz * 2.0));
+            JogS1W2Command = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt, -_vm.StepSizeAz * 2.0));
+            JogS1E2Command = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt, _vm.StepSizeAz * 2.0));
+            JogS2W1Command = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt * 2.0, -_vm.StepSizeAz));
+            JogS2E1Command = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt * 2.0, _vm.StepSizeAz));
 
             HomeMountCommand = new RelayCommand(o => HomeMount());
             StopMountCommand = new RelayCommand(o => StopMount());

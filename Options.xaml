@@ -531,13 +531,17 @@
 
                                     <!-- Row 0: Double-Arrow Diagonals & North -->
                                     <Button Grid.Row="0" Grid.Column="0" Content="↖↖" Command="{Binding DoubleJogNorthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az-" FontSize="9" />
+                                    <Button Grid.Row="0" Grid.Column="1" Content="▲▲◀" Command="{Binding JogN2W1Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Up, Single Az Left" FontSize="9" />
                                     <Button Grid.Row="0" Grid.Column="2" Content="▲▲" Command="{Binding DoubleJogNorthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt+" FontSize="9" />
+                                    <Button Grid.Row="0" Grid.Column="3" Content="▲▲▶" Command="{Binding JogN2E1Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Up, Single Az Right" FontSize="9" />
                                     <Button Grid.Row="0" Grid.Column="4" Content="↗↗" Command="{Binding DoubleJogNorthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az+" FontSize="9" />
 
                                     <!-- Row 1: Single-Arrow Diagonals & North -->
+                                    <Button Grid.Row="1" Grid.Column="0" Content="▲◀◀" Command="{Binding JogN1W2Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Up, Double Az Left" FontSize="9" />
                                     <Button Grid.Row="1" Grid.Column="1" Content="↖" Command="{Binding JogNorthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az-" />
                                     <Button Grid.Row="1" Grid.Column="2" Content="▲" Command="{Binding JogNorthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt+" />
                                     <Button Grid.Row="1" Grid.Column="3" Content="↗" Command="{Binding JogNorthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az+" />
+                                    <Button Grid.Row="1" Grid.Column="4" Content="▲▶▶" Command="{Binding JogN1E2Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Up, Double Az Right" FontSize="9" />
 
                                     <!-- Row 2: Double/Single West, Home, Single/Double East -->
                                     <Button Grid.Row="2" Grid.Column="0" Content="◀◀" Command="{Binding DoubleJogWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az-" FontSize="9" />
@@ -547,13 +551,17 @@
                                     <Button Grid.Row="2" Grid.Column="4" Content="▶▶" Command="{Binding DoubleJogEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az+" FontSize="9" />
 
                                     <!-- Row 3: Single-Arrow Diagonals & South -->
+                                    <Button Grid.Row="3" Grid.Column="0" Content="▼◀◀" Command="{Binding JogS1W2Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Down, Double Az Left" FontSize="9" />
                                     <Button Grid.Row="3" Grid.Column="1" Content="↙" Command="{Binding JogSouthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az-" />
                                     <Button Grid.Row="3" Grid.Column="2" Content="▼" Command="{Binding JogSouthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt-" />
                                     <Button Grid.Row="3" Grid.Column="3" Content="↘" Command="{Binding JogSouthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az+" />
+                                    <Button Grid.Row="3" Grid.Column="4" Content="▼▶▶" Command="{Binding JogS1E2Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Down, Double Az Right" FontSize="9" />
 
                                     <!-- Row 4: Double-Arrow Diagonals & South -->
                                     <Button Grid.Row="4" Grid.Column="0" Content="↙↙" Command="{Binding DoubleJogSouthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az-" FontSize="9" />
+                                    <Button Grid.Row="4" Grid.Column="1" Content="▼▼◀" Command="{Binding JogS2W1Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Down, Single Az Left" FontSize="9" />
                                     <Button Grid.Row="4" Grid.Column="2" Content="▼▼" Command="{Binding DoubleJogSouthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt-" FontSize="9" />
+                                    <Button Grid.Row="4" Grid.Column="3" Content="▼▼▶" Command="{Binding JogS2E1Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Down, Single Az Right" FontSize="9" />
                                     <Button Grid.Row="4" Grid.Column="4" Content="↘↘" Command="{Binding DoubleJogSouthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az+" FontSize="9" />
                                 </Grid>
 
