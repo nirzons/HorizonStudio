@@ -139,6 +139,12 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
 
                     await _telescopeMediator.SlewToCoordinatesAsync(topo, CancellationToken.None);
                     _vm.Log("Slew completed.");
+                    
+                    // NINA/ASCOM often automatically re-enables tracking after an equatorial slew.
+                    // If we are currently mapping, tracking must remain OFF so the mount doesn't drift.
+                    if (_vm.IsRunning) {
+                        _telescopeMediator.SetTrackingEnabled(false);
+                    }
                 } catch (Exception ex) {
                     _vm.Log($"[Error] Slew Jog failed: {ex.Message}");
                 }

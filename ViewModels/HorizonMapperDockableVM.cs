@@ -572,6 +572,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         public ICommand DropPinCommand => _mappingCommands.DropPinCommand;
         public ICommand UndoPinCommand => _mappingCommands.UndoPinCommand;
         public ICommand ClearPinsCommand => _mappingCommands.ClearPinsCommand;
+        public ICommand SaveHorizonCommand => _mappingCommands.SaveHorizonCommand;
 
         public ICommand JogNorthCommand => _mountJogCommands.JogNorthCommand;
         public ICommand JogSouthCommand => _mountJogCommands.JogSouthCommand;

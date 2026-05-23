@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.IO;
 using System.Threading;
 using System.Windows.Input;
+using Microsoft.Win32;
 using NINA.Equipment.Interfaces.Mediator;
 using NirZonshine.NINA.HorizonVisualMapper.Domain;
 
@@ -15,6 +18,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
         public ICommand DropPinCommand { get; }
         public ICommand UndoPinCommand { get; }
         public ICommand ClearPinsCommand { get; }
+        public ICommand SaveHorizonCommand { get; }
 
         public MappingCommands(HorizonMapperDockableVM vm, ITelescopeMediator telescopeMediator) {
             _vm = vm;
@@ -25,6 +29,62 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
             DropPinCommand = new RelayCommand(o => DropPin());
             UndoPinCommand = new RelayCommand(o => UndoPin());
             ClearPinsCommand = new RelayCommand(o => ClearPins());
+            SaveHorizonCommand = new RelayCommand(o => SaveHorizon());
+        }
+
+        public void SaveHorizon() {
+            if (_vm.HorizonNodes.Count < 3) {
+                _vm.Log("[Error] Cannot save horizon: You need to drop at least 3 pins.");
+                global::NINA.Core.Utility.Notification.Notification.ShowError("Need at least 3 points to save a horizon.");
+                return;
+            }
+
+            try {
+                // 1. Sort the nodes by Azimuth
+                var sortedNodes = _vm.HorizonNodes.OrderBy(n => n.Azimuth).ToList();
+
+                // 2. Unwrap if they cross the 0/360 boundary
+                // We look for the largest gap in Azimuth. If it's > 180 degrees, that's likely the 0/360 boundary.
+                double maxGap = 0;
+                int splitIndex = -1;
+                for (int i = 0; i < sortedNodes.Count - 1; i++) {
+                    double gap = sortedNodes[i + 1].Azimuth - sortedNodes[i].Azimuth;
+                    if (gap > maxGap) {
+                        maxGap = gap;
+                        splitIndex = i;
+                    }
+                }
+
+                if (maxGap > 180 && splitIndex != -1) {
+                    _vm.Log($"[Save] Detected boundary wrap (gap {maxGap:F1}°). Unwrapping nodes...");
+                    // Add 360 to the lower azimuth values (from 0 to splitIndex)
+                    for (int i = 0; i <= splitIndex; i++) {
+                        sortedNodes[i] = new HorizonNode(sortedNodes[i].Azimuth + 360, sortedNodes[i].Altitude);
+                    }
+                    // Resort after unwrapping
+                    sortedNodes = sortedNodes.OrderBy(n => n.Azimuth).ToList();
+                }
+
+                // 3. Prompt user for save location
+                var dialog = new SaveFileDialog {
+                    Title = "Save N.I.N.A. Horizon Profile",
+                    Filter = "N.I.N.A. Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                    DefaultExt = ".hrzn",
+                    FileName = $"CustomHorizon_{DateTime.Now:yyyyMMdd_HHmm}.hrzn"
+                };
+
+                if (dialog.ShowDialog() == true) {
+                    // 4. Generate text output
+                    var lines = sortedNodes.Select(n => $"{n.Azimuth:F4} {n.Altitude:F4}");
+                    File.WriteAllLines(dialog.FileName, lines);
+
+                    _vm.Log($"[Save] Successfully saved {sortedNodes.Count} nodes to {dialog.FileName}");
+                    global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"Horizon profile saved successfully to {Path.GetFileName(dialog.FileName)}!");
+                }
+            } catch (Exception ex) {
+                _vm.Log($"[Error] Failed to save horizon: {ex.Message}");
+                global::NINA.Core.Utility.Notification.Notification.ShowError($"Failed to save horizon: {ex.Message}");
+            }
         }
 
         public void StartMapping() {
@@ -57,9 +117,11 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
                 if (_telescopeMediator.GetInfo()?.Connected == true) {
                     _telescopeMediator.StopSlew();
                     _vm.Log("Mount slews aborted.");
+                    _telescopeMediator.SetTrackingEnabled(true);
+                    _vm.Log("Sidereal tracking restored.");
                 }
             } catch (Exception ex) {
-                _vm.Log($"[Error] StopSlew failed: {ex.Message}");
+                _vm.Log($"[Error] StopSlew/Tracking failed: {ex.Message}");
             }
         }
 
