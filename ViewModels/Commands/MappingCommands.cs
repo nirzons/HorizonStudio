@@ -93,6 +93,8 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
             _vm.Log("Suspending sidereal tracking and initiating Horizon Visual Mapping session...");
             _vm.IsRunning = true;
             _vm.SetStatus("Active Mapping", HorizonMapperDockableVM.StatusSuccessColor);
+            _vm.LastRequestedAlt = null;
+            _vm.LastRequestedAz = null;
 
             try {
                 if (_telescopeMediator.GetInfo()?.Connected == true) {

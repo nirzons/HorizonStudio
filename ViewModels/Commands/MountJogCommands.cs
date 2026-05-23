@@ -111,8 +111,20 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
             double currentAlt = _vm.CurrentAlt;
             double currentAz = _vm.CurrentAz;
 
-            double targetAlt = currentAlt + altOffset;
-            double targetAz = (currentAz + azOffset + 360.0) % 360.0;
+            double targetAlt;
+            double targetAz;
+
+            if (_vm.IsExactPositionEnabled && _vm.LastRequestedAlt.HasValue && _vm.LastRequestedAz.HasValue) {
+                targetAlt = _vm.LastRequestedAlt.Value + altOffset;
+                targetAz = (_vm.LastRequestedAz.Value + azOffset + 360.0) % 360.0;
+            } else {
+                targetAlt = _vm.CurrentAlt + altOffset;
+                targetAz = (_vm.CurrentAz + azOffset + 360.0) % 360.0;
+            }
+
+            // Always update LastRequested
+            _vm.LastRequestedAlt = targetAlt;
+            _vm.LastRequestedAz = targetAz;
 
             // 1. Verify safety limits
             if (!_safetyManager.IsTargetPositionSafe(targetAlt, targetAz, out string violation)) {
@@ -137,14 +149,50 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
                         global::NINA.Astrometry.Angle.ByDegree(lon)
                     );
 
+                    DateTime startTime = DateTime.UtcNow;
                     await _telescopeMediator.SlewToCoordinatesAsync(topo, CancellationToken.None);
+                    DateTime endTime = DateTime.UtcNow;
+                    
+                    // 3. Exact Position Micro-Jump
+                    if (_vm.IsExactPositionEnabled) {
+                        double errorAlt = _vm.CurrentAlt - targetAlt;
+                        double errorAz = _vm.CurrentAz - targetAz;
+                        
+                        // Handle azimuth wrap-around error calculation (signed)
+                        if (errorAz > 180.0) errorAz -= 360.0;
+                        if (errorAz < -180.0) errorAz += 360.0;
+
+                        if (Math.Abs(errorAlt) > 0.01 || Math.Abs(errorAz) > 0.01) {
+                            double slewSeconds = (endTime - startTime).TotalSeconds;
+                            if (slewSeconds < 1.0) slewSeconds = 1.0; // Prevent div/0 anomalies
+
+                            // Calculate drift degrees per second
+                            double rateAlt = errorAlt / slewSeconds;
+                            double rateAz = errorAz / slewSeconds;
+
+                            // Predict target to cancel out 8.0s of settle-time drift
+                            double predictedAlt = targetAlt - (rateAlt * 8.0);
+                            double predictedAz = (targetAz - (rateAz * 8.0) + 360.0) % 360.0;
+
+                            _vm.Log($"[Exact Position] Drift error detected (Alt Error: {errorAlt:F3}°, Az Error: {errorAz:F3}°). Applied Predictive Lead. Initiating Micro-Jump...");
+                            
+                            var microTopo = new global::NINA.Astrometry.TopocentricCoordinates(
+                                global::NINA.Astrometry.Angle.ByDegree(predictedAz),
+                                global::NINA.Astrometry.Angle.ByDegree(predictedAlt),
+                                global::NINA.Astrometry.Angle.ByDegree(lat),
+                                global::NINA.Astrometry.Angle.ByDegree(lon)
+                            );
+
+                            await _telescopeMediator.SlewToCoordinatesAsync(microTopo, CancellationToken.None);
+                        }
+                    }
+
                     _vm.Log("Slew completed.");
                     
                     // NINA/ASCOM often automatically re-enables tracking after an equatorial slew.
-                    // If we are currently mapping, tracking must remain OFF so the mount doesn't drift.
-                    if (_vm.IsRunning) {
-                        _telescopeMediator.SetTrackingEnabled(false);
-                    }
+                    // Since the user is doing an Alt-Az jog via our panel, they intend to stay at that Alt-Az.
+                    // We must force tracking OFF so the mount doesn't drift away equatorially.
+                    _telescopeMediator.SetTrackingEnabled(false);
                 } catch (Exception ex) {
                     _vm.Log($"[Error] Slew Jog failed: {ex.Message}");
                 }

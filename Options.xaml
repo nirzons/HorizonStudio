@@ -608,20 +608,24 @@
                                 </StackPanel>
 
                                 <!-- Safety exclusions checklist -->
-                                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,4,0,6" VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0" ToolTip="Enables/disables the 15° Solar proximity lockout.">
+                                <WrapPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,4,0,6" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4" ToolTip="Enables/disables the 15° Solar proximity lockout.">
                                         <TextBlock Text="Solar Safety" Foreground="#FBBF24" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
                                         <CheckBox IsChecked="{Binding EnableSolarSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0" ToolTip="Enables/disables the 85° Zenith proximity lockout.">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4" ToolTip="Enables/disables the 85° Zenith proximity lockout.">
                                         <TextBlock Text="Zenith Lock" Foreground="#FCA5A5" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
                                         <CheckBox IsChecked="{Binding EnableZenithSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" ToolTip="Locks altitude to Horizon only (Azimuth sweeps).">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4" ToolTip="Locks altitude to Horizon only (Azimuth sweeps).">
                                         <TextBlock Text="Horiz. Lock" Foreground="#818CF8" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
                                         <CheckBox IsChecked="{Binding HorizonLockEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
                                     </StackPanel>
-                                </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" ToolTip="Iteratively slews to counter sidereal drift and land exactly on target (Micro-Jump).">
+                                        <TextBlock Text="🎯 Exact Pos." Foreground="#34D399" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                        <CheckBox IsChecked="{Binding IsExactPositionEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </WrapPanel>
 
                                 <!-- Field rotation angle readout -->
                                 <StackPanel Grid.Row="1" Grid.Column="2" Margin="4,4,0,6" ToolTip="Calculated Field Rotation Angle (Parallactic Angle)">

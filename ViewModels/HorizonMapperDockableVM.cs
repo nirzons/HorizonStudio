@@ -436,6 +436,17 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             }
         }
 
+        public bool IsExactPositionEnabled {
+            get => _settingsManager.IsExactPositionEnabled;
+            set {
+                _settingsManager.IsExactPositionEnabled = value;
+                RaisePropertyChanged(nameof(IsExactPositionEnabled));
+            }
+        }
+
+        public double? LastRequestedAlt { get; set; }
+        public double? LastRequestedAz { get; set; }
+
         public double WebcamImageRotationAngle {
             get => _webcamImageRotationAngle;
             set {

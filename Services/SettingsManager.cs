@@ -31,6 +31,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
         private double _alignmentCenterY = 0.5;
         private bool _isCoAligned = false;
         private bool _isCounterRotationEnabled = false;
+        private bool _isExactPositionEnabled = false;
 
         public SettingsManager(IProfileService profileService) {
             _profileService = profileService;
@@ -133,6 +134,11 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
             set { if (_isCounterRotationEnabled != value) { _isCounterRotationEnabled = value; SaveSetting(nameof(IsCounterRotationEnabled), value); OnPropertyChanged(); } }
         }
 
+        public bool IsExactPositionEnabled {
+            get => _isExactPositionEnabled;
+            set { if (_isExactPositionEnabled != value) { _isExactPositionEnabled = value; SaveSetting(nameof(IsExactPositionEnabled), value); OnPropertyChanged(); } }
+        }
+
         private void LoadSettings() {
             try {
                 if (_profileService == null) return;
@@ -155,6 +161,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                 _alignmentCenterY = accessor.GetValueDouble(nameof(AlignmentCenterY), 0.5);
                 _isCoAligned = accessor.GetValueBoolean(nameof(IsCoAligned), false);
                 _isCounterRotationEnabled = accessor.GetValueBoolean(nameof(IsCounterRotationEnabled), false);
+                _isExactPositionEnabled = accessor.GetValueBoolean(nameof(IsExactPositionEnabled), false);
 
                 OnPropertyChanged(string.Empty);
             } catch (Exception ex) {
