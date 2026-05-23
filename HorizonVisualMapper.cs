@@ -1,8 +1,6 @@
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;
 using NINA.Profile.Interfaces;
-using NINA.WPF.Base.Interfaces.Mediator;
-using NINA.WPF.Base.Interfaces.ViewModel;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.Runtime.CompilerServices;
@@ -10,13 +8,16 @@ using System.Threading.Tasks;
 
 namespace NirZonshine.NINA.HorizonVisualMapper {
     /// <summary>
-    /// This class exports the IPluginManifest interface and will be used for the general plugin information and options
+    /// Exports the IPluginManifest interface for N.I.N.A.'s plugin loader.
+    /// General plugin metadata and lifecycle hooks live here.
     /// </summary>
     [Export(typeof(IPluginManifest))]
     public class HorizonVisualMapper : PluginBase, INotifyPropertyChanged {
-        
+
+        // FIX #18: Removed unused IOptionsVM and IImageSaveMediator parameters.
+        // The plugin manifest only needs IProfileService for base class initialization.
         [ImportingConstructor]
-        public HorizonVisualMapper(IProfileService profileService, IOptionsVM options, IImageSaveMediator imageSaveMediator) {
+        public HorizonVisualMapper(IProfileService profileService) {
         }
 
         public override Task Teardown() {

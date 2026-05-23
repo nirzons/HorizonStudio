@@ -40,15 +40,22 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
             }
 
             try {
-                // 1. Sort the nodes by Azimuth
-                var sortedNodes = _vm.HorizonNodes.OrderBy(n => n.Azimuth).ToList();
+                // FIX #4: Work with raw (Az, Alt) value tuples throughout the sort/unwrap/interpolate
+                // pipeline. NEVER reconstruct a HorizonNode during this phase — the HorizonNode
+                // constructor normalizes azimuth back to [0, 360), which silently defeats the
+                // 360°-boundary unwrapping done below.
+                var rawNodes = _vm.HorizonNodes
+                    .Select(n => (Az: n.Azimuth, Alt: n.Altitude))
+                    .OrderBy(n => n.Az)
+                    .ToList();
 
-                // 2. Unwrap if they cross the 0/360 boundary
-                // We look for the largest gap in Azimuth. If it's > 180 degrees, that's likely the 0/360 boundary.
+                // Step 1: Detect and unwrap a 0°/360° boundary crossing.
+                // We look for the largest azimuth gap. If it exceeds 180°, it is almost certainly
+                // the wrap boundary rather than a genuine horizon gap.
                 double maxGap = 0;
                 int splitIndex = -1;
-                for (int i = 0; i < sortedNodes.Count - 1; i++) {
-                    double gap = sortedNodes[i + 1].Azimuth - sortedNodes[i].Azimuth;
+                for (int i = 0; i < rawNodes.Count - 1; i++) {
+                    double gap = rawNodes[i + 1].Az - rawNodes[i].Az;
                     if (gap > maxGap) {
                         maxGap = gap;
                         splitIndex = i;
@@ -57,15 +64,53 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
 
                 if (maxGap > 180 && splitIndex != -1) {
                     _vm.Log($"[Save] Detected boundary wrap (gap {maxGap:F1}°). Unwrapping nodes...");
-                    // Add 360 to the lower azimuth values (from 0 to splitIndex)
+                    // Nodes from [0..splitIndex] have low azimuth values (e.g., 5°, 10°).
+                    // Add 360° to them so they sort correctly after the wrap point (e.g., 365°, 370°).
+                    // We operate on raw doubles here — NOT HorizonNode — so the normalization
+                    // constructor cannot undo our unwrap.
                     for (int i = 0; i <= splitIndex; i++) {
-                        sortedNodes[i] = new HorizonNode(sortedNodes[i].Azimuth + 360, sortedNodes[i].Altitude);
+                        rawNodes[i] = (rawNodes[i].Az + 360.0, rawNodes[i].Alt);
                     }
-                    // Resort after unwrapping
-                    sortedNodes = sortedNodes.OrderBy(n => n.Azimuth).ToList();
+                    // Re-sort in the unwrapped domain (values now span e.g. 310°..370°)
+                    rawNodes = rawNodes.OrderBy(n => n.Az).ToList();
                 }
 
-                // 3. Prompt user for save location
+                // FIX #5: Perform 1-degree linear interpolation across the azimuth range.
+                // For every pair of adjacent nodes, fill in any missing integer-degree steps.
+                // This produces a dense, smooth horizon profile that N.I.N.A. renders faithfully.
+                var interpolated = new List<(double Az, double Alt)>();
+
+                for (int i = 0; i < rawNodes.Count - 1; i++) {
+                    double az1 = rawNodes[i].Az;
+                    double alt1 = rawNodes[i].Alt;
+                    double az2 = rawNodes[i + 1].Az;
+                    double alt2 = rawNodes[i + 1].Alt;
+
+                    // Emit the current node
+                    interpolated.Add((az1, alt1));
+
+                    // Walk every integer degree between az1 and az2
+                    int startDeg = (int)Math.Ceiling(az1);
+                    int endDeg = (int)Math.Floor(az2);
+
+                    for (int deg = startDeg; deg <= endDeg; deg++) {
+                        // Skip if it coincides exactly with az1 (already added) or az2 (added next iteration)
+                        if (Math.Abs(deg - az1) < 1e-9 || Math.Abs(deg - az2) < 1e-9) continue;
+
+                        double t = (deg - az1) / (az2 - az1);
+                        double altInterp = alt1 + t * (alt2 - alt1);
+                        interpolated.Add(((double)deg, altInterp));
+                    }
+                }
+
+                // Add the final node
+                if (rawNodes.Count > 0) {
+                    interpolated.Add(rawNodes[rawNodes.Count - 1]);
+                }
+
+                _vm.Log($"[Save] Interpolated {rawNodes.Count} pins → {interpolated.Count} horizon points at 1° resolution.");
+
+                // Step 3: Prompt user for save location
                 var dialog = new SaveFileDialog {
                     Title = "Save N.I.N.A. Horizon Profile",
                     Filter = "N.I.N.A. Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
@@ -74,11 +119,16 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
                 };
 
                 if (dialog.ShowDialog() == true) {
-                    // 4. Generate text output
-                    var lines = sortedNodes.Select(n => $"{n.Azimuth:F4} {n.Altitude:F4}");
+                    // Step 4: Write the file, normalizing azimuth back to [0, 360) for the output.
+                    // Values unwrapped beyond 360° (e.g., 365°) fold back to 5°, which is correct
+                    // since the interpolation is now complete and sequence is guaranteed by sort order.
+                    var lines = interpolated.Select(n => {
+                        double normalizedAz = (n.Az % 360.0 + 360.0) % 360.0;
+                        return $"{normalizedAz:F4} {n.Alt:F4}";
+                    });
                     File.WriteAllLines(dialog.FileName, lines);
 
-                    _vm.Log($"[Save] Successfully saved {sortedNodes.Count} nodes to {dialog.FileName}");
+                    _vm.Log($"[Save] Successfully saved {interpolated.Count} points to {dialog.FileName}");
                     global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"Horizon profile saved successfully to {Path.GetFileName(dialog.FileName)}!");
                 }
             } catch (Exception ex) {

@@ -26,8 +26,16 @@ using NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands;
 
 namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
 
+    /// <summary>
+    /// Contract for the code-behind's image-click handler.
+    /// Allows Options.xaml.cs to avoid casting DataContext to the concrete VM type.
+    /// </summary>
+    public interface IImageClickHandler {
+        void HandleImageClick(double x, double y, double frameWidth, double frameHeight);
+    }
+
     [Export(typeof(global::NINA.Equipment.Interfaces.ViewModel.IDockableVM))]
-    public class HorizonMapperDockableVM : DockableVM, ICameraConsumer, ITelescopeConsumer {
+    public class HorizonMapperDockableVM : DockableVM, ICameraConsumer, ITelescopeConsumer, IImageClickHandler {
         private readonly IProfileService _profileService;
         private readonly ICameraMediator _cameraMediator;
         private readonly ITelescopeMediator _telescopeMediator;
@@ -38,12 +46,17 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         private readonly SafetyManager _safetyManager;
         private readonly IWebcamService _webcamService;
 
+        private bool _disposed = false;
         private ImageSource _lastFrame;
         private DeviceDescriptor _selectedWebcam;
         private WebcamState _currentWebcamState = WebcamState.Disconnected;
-        private string _logs = "[System] Welcome to Horizon Visual Mapper. Select camera to begin.";
-        private bool _isRunning = false;
         internal int TaskExecutingFlag = 0;
+
+        // FIX #11: Replace the unbounded string-append Log pattern with a capped ring-buffer.
+        // Keeps the last MaxLogLines entries so long mapping sessions don't accumulate
+        // megabytes of log string in memory.
+        private const int MaxLogLines = 500;
+        private readonly Queue<string> _logBuffer = new Queue<string>();
 
         private double _currentAlt;
         private double _currentAz;
@@ -51,6 +64,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         private double _lastNodeAz;
         private int _nodeCount = 0;
         private string _lastNodeText = "None";
+        private string _logs = "[System] Welcome to Horizon Visual Mapper. Select camera to begin.";
 
         private string _statusIndicatorText = "Ready";
         private Brush _statusIndicatorColor = StatusIdleColor;
@@ -326,6 +340,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             }
         }
 
+        private bool _isRunning = false;
         public bool IsRunning {
             get => _isRunning;
             set {
@@ -522,6 +537,8 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             Log("[Co-Alignment] Reset co-alignment to the geometric center.");
         }
 
+        // FIX #19: Implements IImageClickHandler — Options.xaml.cs now casts to the interface,
+        // not to the concrete VM type.
         public void HandleImageClick(double x, double y, double frameWidth, double frameHeight) {
             if (!IsWebcamActive) return;
 
@@ -568,11 +585,17 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             }));
         }
 
+        // FIX #11: Log appends to a capped Queue<string> (max MaxLogLines entries).
+        // This prevents unbounded memory growth during long mapping sessions.
         public void Log(string message) {
-            var formatted = $"\n[{DateTime.Now:HH:mm:ss}] {message}";
+            var formatted = $"[{DateTime.Now:HH:mm:ss}] {message}";
             Logger.Info($"[Horizon Visual Mapper] {message}");
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
-                Logs += formatted;
+                _logBuffer.Enqueue(formatted);
+                if (_logBuffer.Count > MaxLogLines) {
+                    _logBuffer.Dequeue();
+                }
+                Logs = string.Join("\n", _logBuffer);
             }));
         }
 
@@ -589,7 +612,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         public ICommand JogSouthCommand => _mountJogCommands.JogSouthCommand;
         public ICommand JogEastCommand => _mountJogCommands.JogEastCommand;
         public ICommand JogWestCommand => _mountJogCommands.JogWestCommand;
-        
+
         public ICommand JogNorthEastCommand => _mountJogCommands.JogNorthEastCommand;
         public ICommand JogNorthWestCommand => _mountJogCommands.JogNorthWestCommand;
         public ICommand JogSouthEastCommand => _mountJogCommands.JogSouthEastCommand;
@@ -599,7 +622,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         public ICommand DoubleJogSouthCommand => _mountJogCommands.DoubleJogSouthCommand;
         public ICommand DoubleJogEastCommand => _mountJogCommands.DoubleJogEastCommand;
         public ICommand DoubleJogWestCommand => _mountJogCommands.DoubleJogWestCommand;
-        
+
         public ICommand DoubleJogNorthEastCommand => _mountJogCommands.DoubleJogNorthEastCommand;
         public ICommand DoubleJogNorthWestCommand => _mountJogCommands.DoubleJogNorthWestCommand;
         public ICommand DoubleJogSouthEastCommand => _mountJogCommands.DoubleJogSouthEastCommand;
@@ -648,7 +671,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
                 AvailableWebcams.Add(camera);
             }
             Log($"[System] Discovered {AvailableWebcams.Count} available webcam(s).");
-            
+
             // Auto-select first camera if none is selected
             if (SelectedWebcam == null && AvailableWebcams.Count > 0) {
                 SelectedWebcam = AvailableWebcams[0];
@@ -698,7 +721,20 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             }));
         }
 
+        // FIX #10: Added _disposed guard to prevent double-disposal.
+        // Added all missing event unsubscriptions to prevent memory leaks where
+        // the GC cannot collect this VM because service objects hold live references
+        // back to it via event delegates.
         public void Dispose() {
+            if (_disposed) return;
+            _disposed = true;
+
+            // Unsubscribe all events before disposing services
+            _settingsManager.PropertyChanged -= SettingsManager_PropertyChanged;
+            _safetyManager.PropertyChanged -= SafetyManager_PropertyChanged;
+            _safetyManager.SafetyLockoutTriggered -= SafetyManager_SafetyLockoutTriggered;
+            _webcamService.StateChanged -= WebcamService_StateChanged;
+
             try { _webcamService?.Dispose(); } catch { }
             try { _mappingCommands?.StopMapping(); } catch { }
             try { _statusTimer?.Stop(); } catch { }

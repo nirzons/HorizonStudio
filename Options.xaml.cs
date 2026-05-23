@@ -26,7 +26,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper {
             if (lastFrame == null) return;
 
             var pos = e.GetPosition(img);
-            
+
             // Calculate uniform stretch scaling and offsets
             double scaleX = img.ActualWidth / lastFrame.PixelWidth;
             double scaleY = img.ActualHeight / lastFrame.PixelHeight;
@@ -46,9 +46,11 @@ namespace NirZonshine.NINA.HorizonVisualMapper {
             clickX = Math.Max(0.0, Math.Min(renderWidth, clickX));
             clickY = Math.Max(0.0, Math.Min(renderHeight, clickY));
 
-            var vm = img.DataContext as ViewModels.HorizonMapperDockableVM;
-            if (vm != null) {
-                vm.HandleImageClick(clickX, clickY, renderWidth, renderHeight);
+            // FIX #19: Cast to IImageClickHandler instead of the concrete VM type.
+            // This decouples the code-behind from the ViewModel implementation.
+            var handler = img.DataContext as ViewModels.IImageClickHandler;
+            if (handler != null) {
+                handler.HandleImageClick(clickX, clickY, renderWidth, renderHeight);
             }
         }
     }
@@ -71,7 +73,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper {
                 double frameHeight = 0.0;
                 if (values[3] is double d4) frameHeight = d4;
                 else if (values[3] is int i4) frameHeight = i4;
-                
+
                 if (controlWidth <= 0 || controlHeight <= 0 || frameWidth <= 0 || frameHeight <= 0) return 0.0;
 
                 double scaleX = controlWidth / frameWidth;

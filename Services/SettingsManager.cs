@@ -11,6 +11,10 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
         private readonly IProfileService _profileService;
         private readonly Guid _pluginGuid = Guid.Parse("ef99cb7e-3c22-491c-b26a-54315222bf9b");
 
+        // FIX #13: Cache a single accessor instance instead of creating one on every SaveSetting call.
+        // A new accessor is created after a profile change since the underlying profile object may differ.
+        private PluginOptionsAccessor _accessor;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         // Default Values
@@ -36,15 +40,30 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
         public SettingsManager(IProfileService profileService) {
             _profileService = profileService;
             if (_profileService != null) {
+                _accessor = new PluginOptionsAccessor(_profileService, _pluginGuid);
                 _profileService.ProfileChanged += ProfileService_ProfileChanged;
             }
             LoadSettings();
         }
 
+        // FIX #8: Use InvokeAsync (non-blocking) with a null-check to avoid hangs during
+        // plugin teardown when Application.Current may be null.
         private void ProfileService_ProfileChanged(object sender, EventArgs e) {
-            System.Windows.Application.Current.Dispatcher.Invoke(() => {
-                LoadSettings();
-            });
+            var app = System.Windows.Application.Current;
+            if (app == null) {
+                // Application is shutting down; run inline
+                RefreshAccessorAndLoad();
+                return;
+            }
+            app.Dispatcher.InvokeAsync(RefreshAccessorAndLoad);
+        }
+
+        private void RefreshAccessorAndLoad() {
+            // FIX #13: Recreate the accessor after a profile switch so it points at the new profile.
+            if (_profileService != null) {
+                _accessor = new PluginOptionsAccessor(_profileService, _pluginGuid);
+            }
+            LoadSettings();
         }
 
         public double ExposureTime {
@@ -102,8 +121,6 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
             set { if (_enableZenithSafety != value) { _enableZenithSafety = value; SaveSetting(nameof(EnableZenithSafety), value); OnPropertyChanged(); } }
         }
 
-
-
         public bool HorizonLockEnabled {
             get => _horizonLockEnabled;
             set { if (_horizonLockEnabled != value) { _horizonLockEnabled = value; SaveSetting(nameof(HorizonLockEnabled), value); OnPropertyChanged(); } }
@@ -141,27 +158,26 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
 
         private void LoadSettings() {
             try {
-                if (_profileService == null) return;
-                var accessor = new PluginOptionsAccessor(_profileService, _pluginGuid);
+                if (_accessor == null) return;
 
-                _exposureTime = accessor.GetValueDouble(nameof(ExposureTime), 0.5);
-                _gain = accessor.GetValueInt32(nameof(Gain), 0);
-                _binning = accessor.GetValueString(nameof(Binning), "1x1");
-                _focalLengthOverride = accessor.GetValueDouble(nameof(FocalLengthOverride), 0.0);
-                _safetyThreshold = accessor.GetValueDouble(nameof(SafetyThreshold), 15.0);
-                _stepSizeAlt = accessor.GetValueDouble(nameof(StepSizeAlt), 1.0);
-                _stepSizeAz = accessor.GetValueDouble(nameof(StepSizeAz), 1.0);
-                _selectedUvcCamera = accessor.GetValueString(nameof(SelectedUvcCamera), string.Empty);
-                _activeHorizonFilePath = accessor.GetValueString(nameof(ActiveHorizonFilePath), string.Empty);
-                _enableSolarSafety = accessor.GetValueBoolean(nameof(EnableSolarSafety), true);
-                _enableZenithSafety = accessor.GetValueBoolean(nameof(EnableZenithSafety), true);
-                _horizonLockEnabled = accessor.GetValueBoolean(nameof(HorizonLockEnabled), true);
-                _calibrationDataJson = accessor.GetValueString(nameof(CalibrationDataJson), string.Empty);
-                _alignmentCenterX = accessor.GetValueDouble(nameof(AlignmentCenterX), 0.5);
-                _alignmentCenterY = accessor.GetValueDouble(nameof(AlignmentCenterY), 0.5);
-                _isCoAligned = accessor.GetValueBoolean(nameof(IsCoAligned), false);
-                _isCounterRotationEnabled = accessor.GetValueBoolean(nameof(IsCounterRotationEnabled), false);
-                _isExactPositionEnabled = accessor.GetValueBoolean(nameof(IsExactPositionEnabled), false);
+                _exposureTime = _accessor.GetValueDouble(nameof(ExposureTime), 0.5);
+                _gain = _accessor.GetValueInt32(nameof(Gain), 0);
+                _binning = _accessor.GetValueString(nameof(Binning), "1x1");
+                _focalLengthOverride = _accessor.GetValueDouble(nameof(FocalLengthOverride), 0.0);
+                _safetyThreshold = _accessor.GetValueDouble(nameof(SafetyThreshold), 15.0);
+                _stepSizeAlt = _accessor.GetValueDouble(nameof(StepSizeAlt), 1.0);
+                _stepSizeAz = _accessor.GetValueDouble(nameof(StepSizeAz), 1.0);
+                _selectedUvcCamera = _accessor.GetValueString(nameof(SelectedUvcCamera), string.Empty);
+                _activeHorizonFilePath = _accessor.GetValueString(nameof(ActiveHorizonFilePath), string.Empty);
+                _enableSolarSafety = _accessor.GetValueBoolean(nameof(EnableSolarSafety), true);
+                _enableZenithSafety = _accessor.GetValueBoolean(nameof(EnableZenithSafety), true);
+                _horizonLockEnabled = _accessor.GetValueBoolean(nameof(HorizonLockEnabled), true);
+                _calibrationDataJson = _accessor.GetValueString(nameof(CalibrationDataJson), string.Empty);
+                _alignmentCenterX = _accessor.GetValueDouble(nameof(AlignmentCenterX), 0.5);
+                _alignmentCenterY = _accessor.GetValueDouble(nameof(AlignmentCenterY), 0.5);
+                _isCoAligned = _accessor.GetValueBoolean(nameof(IsCoAligned), false);
+                _isCounterRotationEnabled = _accessor.GetValueBoolean(nameof(IsCounterRotationEnabled), false);
+                _isExactPositionEnabled = _accessor.GetValueBoolean(nameof(IsExactPositionEnabled), false);
 
                 OnPropertyChanged(string.Empty);
             } catch (Exception ex) {
@@ -169,15 +185,15 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
             }
         }
 
+        // FIX #13: Uses the cached _accessor instead of constructing a new one per call.
         private void SaveSetting(string key, object value) {
             try {
-                if (_profileService == null) return;
-                var accessor = new PluginOptionsAccessor(_profileService, _pluginGuid);
-                
-                if (value is double d) accessor.SetValueDouble(key, d);
-                else if (value is int i) accessor.SetValueInt32(key, i);
-                else if (value is bool b) accessor.SetValueBoolean(key, b);
-                else if (value is string s) accessor.SetValueString(key, s);
+                if (_accessor == null) return;
+
+                if (value is double d) _accessor.SetValueDouble(key, d);
+                else if (value is int i) _accessor.SetValueInt32(key, i);
+                else if (value is bool b) _accessor.SetValueBoolean(key, b);
+                else if (value is string s) _accessor.SetValueString(key, s);
             } catch (Exception ex) {
                 Logger.Error($"[Horizon Visual Mapper] Failed to save setting '{key}': {ex.Message}");
             }

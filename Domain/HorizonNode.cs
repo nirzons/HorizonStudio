@@ -6,6 +6,11 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Domain {
     /// Coordinates are in degrees.
     /// </summary>
     public class HorizonNode {
+        // Radar canvas geometry constants — must match the 300x300 Canvas in Options.xaml.
+        // Center is at (RadarCenterOffset, RadarCenterOffset); horizon ring radius is RadarMaxRadius.
+        private const double RadarMaxRadius = 120.0;
+        private const double RadarCenterOffset = 150.0;
+
         public double Azimuth { get; }
         public double Altitude { get; }
         public DateTime Timestamp { get; }
@@ -18,20 +23,26 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Domain {
             Timestamp = DateTime.Now;
         }
 
+        /// <summary>
+        /// Canvas X coordinate for this node on the sky-dome radar display.
+        /// Altitude 90° maps to the center; Altitude 0° maps to the outer ring.
+        /// </summary>
         public double RadarX {
             get {
-                // Altitude 90 is at center (r=0), Altitude 0 is at outer radius (r=120)
-                double r = 120.0 * (90.0 - Altitude) / 90.0;
+                double r = RadarMaxRadius * (90.0 - Altitude) / 90.0;
                 double rad = Azimuth * Math.PI / 180.0;
-                return 150.0 + r * Math.Sin(rad);
+                return RadarCenterOffset + r * Math.Sin(rad);
             }
         }
 
+        /// <summary>
+        /// Canvas Y coordinate for this node on the sky-dome radar display.
+        /// </summary>
         public double RadarY {
             get {
-                double r = 120.0 * (90.0 - Altitude) / 90.0;
+                double r = RadarMaxRadius * (90.0 - Altitude) / 90.0;
                 double rad = Azimuth * Math.PI / 180.0;
-                return 150.0 - r * Math.Cos(rad);
+                return RadarCenterOffset - r * Math.Cos(rad);
             }
         }
 

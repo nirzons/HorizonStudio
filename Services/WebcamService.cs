@@ -21,13 +21,18 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                     return _currentState;
                 }
             }
+            // FIX #7: Capture the new value and exit the lock BEFORE firing the event.
+            // Firing an event while holding a lock is a deadlock risk: if any subscriber
+            // tries to read CurrentState (which also acquires _stateLock), it will deadlock.
             private set {
+                WebcamState newState;
                 lock (_stateLock) {
-                    if (_currentState != value) {
-                        _currentState = value;
-                        StateChanged?.Invoke(this, _currentState);
-                    }
+                    if (_currentState == value) return;
+                    _currentState = value;
+                    newState = value;
                 }
+                // Event is raised outside the lock — safe for all subscribers.
+                StateChanged?.Invoke(this, newState);
             }
         }
 
@@ -99,7 +104,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                     async bufferScope => {
                         try {
                             if (CurrentState != WebcamState.Streaming) return;
-                            
+
                             // Extract frame data as raw image bytes (BMP/JPEG)
                             byte[] frameData = bufferScope.Buffer.ExtractImage();
                             if (frameData != null && frameData.Length > 0) {

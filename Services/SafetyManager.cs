@@ -18,6 +18,11 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
         private readonly Timer _heartbeatTimer;
         private bool _disposed;
 
+        // FIX #1: Dedicated lock to protect _latestTelescopeInfo across the mediator
+        // callback thread and the System.Threading.Timer heartbeat thread.
+        private readonly object _telescopeInfoLock = new object();
+        private TelescopeInfo _latestTelescopeInfo;
+
         private bool _isSolarSafetyAlert;
         private bool _isZenithSafetyAlert;
         private string _safetyMessage = "All safety systems nominal.";
@@ -37,11 +42,12 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
             _heartbeatTimer = new Timer(SafetyHeartbeat, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
         }
 
+        // FIX #1: All writes to _latestTelescopeInfo are now guarded by the lock.
         public void UpdateDeviceInfo(TelescopeInfo deviceInfo) {
-            _latestTelescopeInfo = deviceInfo;
+            lock (_telescopeInfoLock) {
+                _latestTelescopeInfo = deviceInfo;
+            }
         }
-
-        private TelescopeInfo _latestTelescopeInfo;
 
         public bool IsSolarSafetyAlert {
             get => _isSolarSafetyAlert;
@@ -66,12 +72,17 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                     return;
                 }
 
-                var currentPosition = _telescopeMediator.GetCurrentPosition();
-                if (currentPosition == null) return;
+                // FIX #1: Read the latest telescope info under the lock to get a consistent snapshot.
+                // FIX #17: Removed dead GetCurrentPosition() COM call — position comes from _latestTelescopeInfo.
+                TelescopeInfo telescopeInfo;
+                lock (_telescopeInfoLock) {
+                    telescopeInfo = _latestTelescopeInfo;
+                }
 
-                // Query current mount coordinates from the latest event info
-                double currentAlt = _latestTelescopeInfo?.Altitude ?? _telescopeMediator.GetInfo()?.Altitude ?? 0.0;
-                double currentAz = _latestTelescopeInfo?.Azimuth ?? _telescopeMediator.GetInfo()?.Azimuth ?? 0.0;
+                if (telescopeInfo == null) return;
+
+                double currentAlt = telescopeInfo.Altitude;
+                double currentAz = telescopeInfo.Azimuth;
 
                 // 1. Zenith Proximity Check
                 if (_settingsManager.EnableZenithSafety) {
@@ -96,7 +107,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
 
                     if (angularDistance < threshold) {
                         IsSolarSafetyAlert = true;
-                        
+
                         if (_settingsManager.EnableSolarSafety) {
                             SafetyMessage = $"[SAFETY EXCLUSION] Solar Proximity Lock active! Mount points {angularDistance:F2}° from the Sun (Threshold: {threshold}°).";
                             SafetyLockoutTriggered?.Invoke(this, "Solar proximity detected");
@@ -166,7 +177,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
         }
 
         /// <summary>
-        /// Calculates the redundant solar coordinates (Alt, Az) based on observer location and time.
+        /// Calculates the solar coordinates (Alt, Az) based on observer location and time.
         /// Uses low-precision standard solar position formulas (accurate to ~0.01°).
         /// </summary>
         private HorizontalCoordinates CalculateSunPosition() {
@@ -201,7 +212,6 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                 double decRad = Math.Asin(Math.Sin(eRad) * Math.Sin(LRad));
 
                 // Local Sidereal Time (LST) calculation
-                // GMST at 0h UT
                 double julianDays = d + 2451545.0;
                 double T = (julianDays - 2451545.0) / 36525.0;
                 double gmst = 280.46061837 + 360.98564736629 * (julianDays - 2451545.0) + T * T * (0.000387933 - T / 38710000.0);
@@ -246,12 +256,32 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
         public void Dispose() {
             if (_disposed) return;
             _disposed = true;
-            _heartbeatTimer?.Dispose();
+
+            // FIX #2: Use Timer.Dispose(WaitHandle) to block until any currently-executing
+            // SafetyHeartbeat callback has fully completed before we call RemoveConsumer.
+            // This prevents the heartbeat from calling StopSlew() on a half-torn-down object.
+            using var callbackDone = new ManualResetEvent(false);
+            _heartbeatTimer?.Dispose(callbackDone);
+            // Wait up to 2 seconds for the in-flight callback to finish.
+            callbackDone.WaitOne(TimeSpan.FromSeconds(2));
+
             try { _telescopeMediator.RemoveConsumer(this); } catch { }
         }
 
+        // FIX #6: All PropertyChanged notifications are marshalled to the UI dispatcher.
+        // SafetyHeartbeat runs on a System.Threading.Timer thread-pool thread, and WPF
+        // property bindings require notifications to arrive on the UI thread.
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            var handler = PropertyChanged;
+            if (handler == null) return;
+            var app = System.Windows.Application.Current;
+            if (app == null) {
+                // Application is shutting down — fire inline to avoid NullRef
+                handler(this, new PropertyChangedEventArgs(propertyName));
+                return;
+            }
+            app.Dispatcher.BeginInvoke(new Action(() =>
+                handler(this, new PropertyChangedEventArgs(propertyName))));
         }
     }
 }
