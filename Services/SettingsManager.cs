@@ -27,6 +27,10 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
         private bool _enableZenithSafety = true;
         private bool _horizonLockEnabled = true;
         private string _calibrationDataJson = string.Empty;
+        private double _alignmentCenterX = 0.5;
+        private double _alignmentCenterY = 0.5;
+        private bool _isCoAligned = false;
+        private bool _isCounterRotationEnabled = false;
 
         public SettingsManager(IProfileService profileService) {
             _profileService = profileService;
@@ -109,6 +113,26 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
             set { if (_calibrationDataJson != value) { _calibrationDataJson = value; SaveSetting(nameof(CalibrationDataJson), value); OnPropertyChanged(); } }
         }
 
+        public double AlignmentCenterX {
+            get => _alignmentCenterX;
+            set { if (_alignmentCenterX != value) { _alignmentCenterX = value; SaveSetting(nameof(AlignmentCenterX), value); OnPropertyChanged(); } }
+        }
+
+        public double AlignmentCenterY {
+            get => _alignmentCenterY;
+            set { if (_alignmentCenterY != value) { _alignmentCenterY = value; SaveSetting(nameof(AlignmentCenterY), value); OnPropertyChanged(); } }
+        }
+
+        public bool IsCoAligned {
+            get => _isCoAligned;
+            set { if (_isCoAligned != value) { _isCoAligned = value; SaveSetting(nameof(IsCoAligned), value); OnPropertyChanged(); } }
+        }
+
+        public bool IsCounterRotationEnabled {
+            get => _isCounterRotationEnabled;
+            set { if (_isCounterRotationEnabled != value) { _isCounterRotationEnabled = value; SaveSetting(nameof(IsCounterRotationEnabled), value); OnPropertyChanged(); } }
+        }
+
         private void LoadSettings() {
             try {
                 if (_profileService == null) return;
@@ -127,6 +151,10 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                 _enableZenithSafety = accessor.GetValueBoolean(nameof(EnableZenithSafety), true);
                 _horizonLockEnabled = accessor.GetValueBoolean(nameof(HorizonLockEnabled), true);
                 _calibrationDataJson = accessor.GetValueString(nameof(CalibrationDataJson), string.Empty);
+                _alignmentCenterX = accessor.GetValueDouble(nameof(AlignmentCenterX), 0.5);
+                _alignmentCenterY = accessor.GetValueDouble(nameof(AlignmentCenterY), 0.5);
+                _isCoAligned = accessor.GetValueBoolean(nameof(IsCoAligned), false);
+                _isCounterRotationEnabled = accessor.GetValueBoolean(nameof(IsCounterRotationEnabled), false);
 
                 OnPropertyChanged(string.Empty);
             } catch (Exception ex) {

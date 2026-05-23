@@ -25,6 +25,18 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
         
         public ICommand HomeMountCommand { get; }
 
+        public ICommand DoubleJogNorthCommand { get; }
+        public ICommand DoubleJogSouthCommand { get; }
+        public ICommand DoubleJogEastCommand { get; }
+        public ICommand DoubleJogWestCommand { get; }
+        
+        public ICommand DoubleJogNorthEastCommand { get; }
+        public ICommand DoubleJogNorthWestCommand { get; }
+        public ICommand DoubleJogSouthEastCommand { get; }
+        public ICommand DoubleJogSouthWestCommand { get; }
+        
+        public ICommand StopMountCommand { get; }
+
         public MountJogCommands(HorizonMapperDockableVM vm, ITelescopeMediator telescopeMediator, SafetyManager safetyManager, IProfileService profileService) {
             _vm = vm;
             _telescopeMediator = telescopeMediator;
@@ -41,7 +53,18 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
             JogSouthEastCommand = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt, _vm.StepSizeAz));
             JogSouthWestCommand = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt, -_vm.StepSizeAz));
 
+            DoubleJogNorthCommand = new RelayCommand(o => SlewJog(_vm.StepSizeAlt * 2.0, 0));
+            DoubleJogSouthCommand = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt * 2.0, 0));
+            DoubleJogEastCommand = new RelayCommand(o => SlewJog(0, _vm.StepSizeAz * 2.0));
+            DoubleJogWestCommand = new RelayCommand(o => SlewJog(0, -_vm.StepSizeAz * 2.0));
+
+            DoubleJogNorthEastCommand = new RelayCommand(o => SlewJog(_vm.StepSizeAlt * 2.0, _vm.StepSizeAz * 2.0));
+            DoubleJogNorthWestCommand = new RelayCommand(o => SlewJog(_vm.StepSizeAlt * 2.0, -_vm.StepSizeAz * 2.0));
+            DoubleJogSouthEastCommand = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt * 2.0, _vm.StepSizeAz * 2.0));
+            DoubleJogSouthWestCommand = new RelayCommand(o => SlewJog(-_vm.StepSizeAlt * 2.0, -_vm.StepSizeAz * 2.0));
+
             HomeMountCommand = new RelayCommand(o => HomeMount());
+            StopMountCommand = new RelayCommand(o => StopMount());
         }
 
         private void HomeMount() {
@@ -100,6 +123,19 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
                     _vm.Log("Slew completed.");
                 } catch (Exception ex) {
                     _vm.Log($"[Error] Slew Jog failed: {ex.Message}");
+                }
+            });
+        }
+
+        private void StopMount() {
+            if (!_vm.IsMountConnected) return;
+            Task.Run(() => {
+                try {
+                    _vm.Log("Stopping telescope movement...");
+                    _telescopeMediator.StopSlew();
+                    _vm.Log("Telescope motion halted successfully.");
+                } catch (Exception ex) {
+                    _vm.Log($"[Error] StopSlew failed: {ex.Message}");
                 }
             });
         }

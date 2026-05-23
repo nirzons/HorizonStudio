@@ -60,6 +60,9 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         private bool _lastIsCameraConnected;
         private bool _lastIsMountConnected;
 
+        private bool _isCoAligning = false;
+        private double _webcamImageRotationAngle = 0.0;
+
         internal static readonly Brush StatusIdleColor = CreateFrozenBrush("#72BDFF");
         internal static readonly Brush StatusWarningColor = CreateFrozenBrush("#FBBF24");
         internal static readonly Brush StatusSuccessColor = CreateFrozenBrush("#22C55E");
@@ -68,6 +71,8 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
 
         private MappingCommands _mappingCommands;
         private MountJogCommands _mountJogCommands;
+
+        public ObservableCollection<HorizonNode> HorizonNodes { get; } = new ObservableCollection<HorizonNode>();
 
         [ImportingConstructor]
         public HorizonMapperDockableVM(IProfileService profileService, ICameraMediator cameraMediator, ITelescopeMediator telescopeMediator, IImagingMediator imagingMediator) : base(profileService) {
@@ -106,6 +111,10 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             group.Freeze();
             ImageGeometry = group;
 
+            HorizonNodes.CollectionChanged += (s, e) => {
+                RaisePropertyChanged(nameof(RadarHorizonPoints));
+            };
+
             _mappingCommands = new MappingCommands(this, _telescopeMediator);
             _mountJogCommands = new MountJogCommands(this, _telescopeMediator, _safetyManager, _profileService);
 
@@ -115,6 +124,10 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             StartWebcamCommand = new RelayCommand(async _ => await StartWebcamAsync(), _ => CanStartWebcam);
             StopWebcamCommand = new RelayCommand(_ => StopWebcam(), _ => CanStopWebcam);
             RefreshWebcamsCommand = new RelayCommand(_ => RefreshWebcams());
+
+            StartCoAlignmentCommand = new RelayCommand(_ => StartCoAlignment());
+            SaveCoAlignmentCommand = new RelayCommand(_ => SaveCoAlignment());
+            ResetCoAlignmentCommand = new RelayCommand(_ => ResetCoAlignment());
 
             RefreshWebcams();
             var savedPath = _settingsManager.SelectedUvcCamera;
@@ -167,6 +180,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             if (IsMountConnected && _currentTelescopeInfo != null) {
                 CurrentAlt = _currentTelescopeInfo.Altitude;
                 CurrentAz = _currentTelescopeInfo.Azimuth;
+                UpdateRotationAngle();
             }
         }
 
@@ -186,6 +200,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
                 if (IsMountConnected && deviceInfo != null) {
                     CurrentAlt = deviceInfo.Altitude;
                     CurrentAz = deviceInfo.Azimuth;
+                    UpdateRotationAngle();
                 }
             });
         }
@@ -322,12 +337,22 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
 
         public double CurrentAlt {
             get => _currentAlt;
-            set { _currentAlt = value; RaisePropertyChanged(nameof(CurrentAlt)); }
+            set {
+                _currentAlt = value;
+                RaisePropertyChanged(nameof(CurrentAlt));
+                RaisePropertyChanged(nameof(TelescopeRadarX));
+                RaisePropertyChanged(nameof(TelescopeRadarY));
+            }
         }
 
         public double CurrentAz {
             get => _currentAz;
-            set { _currentAz = value; RaisePropertyChanged(nameof(CurrentAz)); }
+            set {
+                _currentAz = value;
+                RaisePropertyChanged(nameof(CurrentAz));
+                RaisePropertyChanged(nameof(TelescopeRadarX));
+                RaisePropertyChanged(nameof(TelescopeRadarY));
+            }
         }
 
         public double LastNodeAlt {
@@ -358,6 +383,171 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         public Brush StatusIndicatorColor {
             get => _statusIndicatorColor;
             set { _statusIndicatorColor = value; RaisePropertyChanged(nameof(StatusIndicatorColor)); }
+        }
+
+        public bool IsCoAligning {
+            get => _isCoAligning;
+            set {
+                if (_isCoAligning != value) {
+                    _isCoAligning = value;
+                    RaisePropertyChanged(nameof(IsCoAligning));
+                }
+            }
+        }
+
+        public bool IsCoAligned {
+            get => _settingsManager.IsCoAligned;
+            set {
+                _settingsManager.IsCoAligned = value;
+                RaisePropertyChanged(nameof(IsCoAligned));
+                RaisePropertyChanged(nameof(AlignmentCenterPoint));
+            }
+        }
+
+        public double AlignmentCenterX {
+            get => _settingsManager.AlignmentCenterX;
+            set {
+                _settingsManager.AlignmentCenterX = value;
+                RaisePropertyChanged(nameof(AlignmentCenterX));
+                RaisePropertyChanged(nameof(AlignmentCenterPoint));
+            }
+        }
+
+        public double AlignmentCenterY {
+            get => _settingsManager.AlignmentCenterY;
+            set {
+                _settingsManager.AlignmentCenterY = value;
+                RaisePropertyChanged(nameof(AlignmentCenterY));
+                RaisePropertyChanged(nameof(AlignmentCenterPoint));
+            }
+        }
+
+        public System.Windows.Point AlignmentCenterPoint => new System.Windows.Point(
+            IsCoAligned ? AlignmentCenterX : 0.5,
+            IsCoAligned ? AlignmentCenterY : 0.5
+        );
+
+        public bool IsCounterRotationEnabled {
+            get => _settingsManager.IsCounterRotationEnabled;
+            set {
+                _settingsManager.IsCounterRotationEnabled = value;
+                RaisePropertyChanged(nameof(IsCounterRotationEnabled));
+                UpdateRotationAngle();
+            }
+        }
+
+        public double WebcamImageRotationAngle {
+            get => _webcamImageRotationAngle;
+            set {
+                if (_webcamImageRotationAngle != value) {
+                    _webcamImageRotationAngle = value;
+                    RaisePropertyChanged(nameof(WebcamImageRotationAngle));
+                }
+            }
+        }
+
+        public double TelescopeRadarX {
+            get {
+                double r = 120.0 * (90.0 - CurrentAlt) / 90.0;
+                double rad = CurrentAz * Math.PI / 180.0;
+                return 150.0 + r * Math.Sin(rad);
+            }
+        }
+
+        public double TelescopeRadarY {
+            get {
+                double r = 120.0 * (90.0 - CurrentAlt) / 90.0;
+                double rad = CurrentAz * Math.PI / 180.0;
+                return 150.0 - r * Math.Cos(rad);
+            }
+        }
+
+        public System.Windows.Media.PointCollection RadarHorizonPoints {
+            get {
+                var points = new System.Windows.Media.PointCollection();
+                // Sort nodes by azimuth to draw the winding horizon line correctly
+                var sortedNodes = new List<HorizonNode>(HorizonNodes);
+                sortedNodes.Sort((a, b) => a.Azimuth.CompareTo(b.Azimuth));
+
+                foreach (var node in sortedNodes) {
+                    points.Add(new System.Windows.Point(node.RadarX, node.RadarY));
+                }
+                return points;
+            }
+        }
+
+        private void StartCoAlignment() {
+            System.Windows.MessageBox.Show(
+                "To perform optical axis co-alignment, you need to view both your primary telescope camera and this webcam feed at the same time.\n\n" +
+                "How to view both simultaneously in N.I.N.A.:\n" +
+                "1. Click and hold this 'Horizon Visual Mapper' tab header.\n" +
+                "2. Drag it over N.I.N.A.'s native 'Imaging' panel.\n" +
+                "3. Hover near the left, right, or bottom edge until a blue docking preview box highlights.\n" +
+                "4. Release your mouse button to dock the webcam feed side-by-side with your main camera view.\n\n" +
+                "Co-Alignment Steps:\n" +
+                "1. Center a distinct landmark (e.g., a chimney peak or antenna tip) in your primary telescope camera.\n" +
+                "2. Click that exact same landmark in the live webcam feed below.\n" +
+                "3. Click 'Save Alignment' to save your custom optical alignment center.\n\n" +
+                "Click OK to begin co-alignment.",
+                "Co-Alignment Assistant Setup Guide",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+
+            IsCoAligning = true;
+            Log("[Co-Alignment] Co-Alignment assistant started. Center a target in your main telescope camera, then click it on the webcam stream.");
+        }
+
+        private void SaveCoAlignment() {
+            IsCoAligning = false;
+            IsCoAligned = true;
+            Log($"[Co-Alignment] Saved custom co-alignment center: ({AlignmentCenterX:F3}, {AlignmentCenterY:F3})");
+        }
+
+        private void ResetCoAlignment() {
+            IsCoAligning = false;
+            IsCoAligned = false;
+            AlignmentCenterX = 0.5;
+            AlignmentCenterY = 0.5;
+            Log("[Co-Alignment] Reset co-alignment to the geometric center.");
+        }
+
+        public void HandleImageClick(double x, double y, double frameWidth, double frameHeight) {
+            if (!IsWebcamActive) return;
+
+            if (IsCoAligning) {
+                if (frameWidth <= 0 || frameHeight <= 0) return;
+                AlignmentCenterX = x / frameWidth;
+                AlignmentCenterY = y / frameHeight;
+                Log($"[Co-Alignment] Click registered: ({x:F1}, {y:F1}) -> Ratio: ({AlignmentCenterX:F3}, {AlignmentCenterY:F3})");
+            }
+        }
+
+        private void UpdateRotationAngle() {
+            if (!IsCounterRotationEnabled || !IsMountConnected) {
+                WebcamImageRotationAngle = 0.0;
+                return;
+            }
+
+            try {
+                double lat = _telescopeMediator.GetInfo()?.SiteLatitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Latitude ?? 0.0;
+                double alt = CurrentAlt;
+                double az = CurrentAz;
+
+                double latRad = lat * Math.PI / 180.0;
+                double altRad = alt * Math.PI / 180.0;
+                double azRad = az * Math.PI / 180.0;
+
+                double y = Math.Sin(azRad);
+                double x = Math.Cos(altRad) * Math.Tan(latRad) - Math.Sin(altRad) * Math.Cos(azRad);
+
+                double qRad = Math.Atan2(y, x);
+                double qDeg = qRad * 180.0 / Math.PI;
+
+                WebcamImageRotationAngle = -qDeg;
+            } catch (Exception ex) {
+                Logger.Error($"[Horizon Visual Mapper] Counter-rotation calculation failed: {ex.Message}");
+                WebcamImageRotationAngle = 0.0;
+            }
         }
 
         internal void SetStatus(string text, Brush color) {
@@ -392,8 +582,23 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         public ICommand JogNorthWestCommand => _mountJogCommands.JogNorthWestCommand;
         public ICommand JogSouthEastCommand => _mountJogCommands.JogSouthEastCommand;
         public ICommand JogSouthWestCommand => _mountJogCommands.JogSouthWestCommand;
+
+        public ICommand DoubleJogNorthCommand => _mountJogCommands.DoubleJogNorthCommand;
+        public ICommand DoubleJogSouthCommand => _mountJogCommands.DoubleJogSouthCommand;
+        public ICommand DoubleJogEastCommand => _mountJogCommands.DoubleJogEastCommand;
+        public ICommand DoubleJogWestCommand => _mountJogCommands.DoubleJogWestCommand;
         
+        public ICommand DoubleJogNorthEastCommand => _mountJogCommands.DoubleJogNorthEastCommand;
+        public ICommand DoubleJogNorthWestCommand => _mountJogCommands.DoubleJogNorthWestCommand;
+        public ICommand DoubleJogSouthEastCommand => _mountJogCommands.DoubleJogSouthEastCommand;
+        public ICommand DoubleJogSouthWestCommand => _mountJogCommands.DoubleJogSouthWestCommand;
+
         public ICommand HomeMountCommand => _mountJogCommands.HomeMountCommand;
+        public ICommand StopMountCommand => _mountJogCommands.StopMountCommand;
+
+        public ICommand StartCoAlignmentCommand { get; }
+        public ICommand SaveCoAlignmentCommand { get; }
+        public ICommand ResetCoAlignmentCommand { get; }
 
         public ICommand StartWebcamCommand { get; }
         public ICommand StopWebcamCommand { get; }

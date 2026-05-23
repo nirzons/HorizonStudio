@@ -16,6 +16,11 @@
 
     <!-- Main Dockable UI DataTemplate (Loaded in N.I.N.A Imaging Screen) -->
     <DataTemplate x:Key="NirZonshine.NINA.HorizonVisualMapper.ViewModels.HorizonMapperDockableVM_Dockable">
+        <DataTemplate.Resources>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <local:RenderedImageSizeConverter x:Key="RenderedImageSizeConverter" />
+            <local:RatioToCoordinateConverter x:Key="RatioToCoordinateConverter" />
+        </DataTemplate.Resources>
         <Grid Margin="10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -115,65 +120,252 @@
                     <ColumnDefinition Width="1*" />   <!-- Action & Configuration Controls -->
                 </Grid.ColumnDefinitions>
 
-                <!-- Column 0: Camera Live View & Target HUD overlay -->
-                <Border Grid.Column="0" CornerRadius="8" Background="#0f0f12" BorderThickness="1" BorderBrush="#2A2A30" Padding="10" Margin="0,0,10,0">
-                    <Grid>
-                        <!-- Fallback screen if camera is disabled/loading -->
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsWebcamActive}" Value="False">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <Path Data="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4M4,6V18H20V6H4M11,7A3,3 0 0,1 14,10A3,3 0 0,1 11,13A3,3 0 0,1 8,10A3,3 0 0,1 11,7M18,8A1,1 0 0,1 19,9A1,1 0 0,1 18,10A1,1 0 0,1 17,9A1,1 0 0,1 18,8M5,16H19V17H5V16Z" 
-                                  Fill="#3D3D45" Width="48" Height="48" HorizontalAlignment="Center" />
-                            <TextBlock Text="UVC Webcam Live Stream" FontSize="13" FontWeight="Bold" Foreground="DarkGray" Margin="0,10,0,2" HorizontalAlignment="Center" />
-                            <TextBlock Text="Active UVC webcam frames will display here." FontSize="10" Foreground="Gray" HorizontalAlignment="Center" />
-                        </StackPanel>
+                <!-- Column 0: Camera Live View & Sky Dome Radar Tabs -->
+                <TabControl Grid.Column="0" Margin="0,0,10,0" Background="#0f0f12" BorderThickness="1" BorderBrush="#2A2A30">
+                    <!-- Tab 1: Live Webcam View -->
+                    <TabItem Header="📷 Live Camera View">
+                        <Border CornerRadius="0,0,8,8" Padding="10" Background="#0c0c0e">
+                            <Grid>
+                                <!-- Fallback screen if camera is disabled/loading -->
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsWebcamActive}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <Path Data="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4M4,6V18H20V6H4M11,7A3,3 0 0,1 14,10A3,3 0 0,1 11,13A3,3 0 0,1 8,10A3,3 0 0,1 11,7M18,8A1,1 0 0,1 19,9A1,1 0 0,1 18,10A1,1 0 0,1 17,9A1,1 0 0,1 18,8M5,16H19V17H5V16Z" 
+                                          Fill="#3D3D45" Width="48" Height="48" HorizontalAlignment="Center" />
+                                    <TextBlock Text="UVC Webcam Live Stream" FontSize="13" FontWeight="Bold" Foreground="DarkGray" Margin="0,10,0,2" HorizontalAlignment="Center" />
+                                    <TextBlock Text="Active UVC webcam frames will display here." FontSize="10" Foreground="Gray" HorizontalAlignment="Center" />
+                                </StackPanel>
 
-                        <!-- Video Stream Source -->
-                        <Image Source="{Binding LastFrame}" Stretch="Uniform" />
+                                <!-- Rotatable webcam feed wrapper, rotating around the co-alignment center in EQ mode -->
+                                <Grid RenderTransformOrigin="{Binding AlignmentCenterPoint}">
+                                    <Grid.RenderTransform>
+                                        <RotateTransform Angle="{Binding WebcamImageRotationAngle}" />
+                                    </Grid.RenderTransform>
 
-                        <!-- Concentric Target HUD Overlay -->
-                        <Grid IsHitTestVisible="False" Opacity="0.55">
-                            <Grid.Style>
-                                <Style TargetType="Grid">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsWebcamActive}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Grid.Style>
-                            
-                            <!-- Concentric target rings -->
-                            <Ellipse Width="180" Height="180" Stroke="#8000FF00" StrokeThickness="0.8" StrokeDashArray="4,4" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            <Ellipse Width="80" Height="80" Stroke="#FF00FF00" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            <Ellipse Width="8" Height="8" Fill="#FF00FF00" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            
-                            <!-- Reticle Lines -->
-                            <Rectangle Width="1" Fill="#8000FF00" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="0,10" />
-                            <Rectangle Height="1" Fill="#8000FF00" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,0" />
+                                    <!-- Video Stream Source -->
+                                    <Image x:Name="WebcamImage" Source="{Binding LastFrame}" Stretch="Uniform" MouseLeftButtonDown="Image_MouseLeftButtonDown" Cursor="Cross" />
+
+                                    <!-- Aspect-Ratio-Locked Overlays Grid -->
+                                    <Grid x:Name="OverlayContainer" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                        <Grid.Width>
+                                            <MultiBinding Converter="{StaticResource RenderedImageSizeConverter}" ConverterParameter="Width">
+                                                <Binding Path="ActualWidth" ElementName="WebcamImage" />
+                                                <Binding Path="ActualHeight" ElementName="WebcamImage" />
+                                                <Binding Path="LastFrame.PixelWidth" />
+                                                <Binding Path="LastFrame.PixelHeight" />
+                                            </MultiBinding>
+                                        </Grid.Width>
+                                        <Grid.Height>
+                                            <MultiBinding Converter="{StaticResource RenderedImageSizeConverter}" ConverterParameter="Height">
+                                                <Binding Path="ActualWidth" ElementName="WebcamImage" />
+                                                <Binding Path="ActualHeight" ElementName="WebcamImage" />
+                                                <Binding Path="LastFrame.PixelWidth" />
+                                                <Binding Path="LastFrame.PixelHeight" />
+                                            </MultiBinding>
+                                        </Grid.Height>
+
+                                        <!-- Concentric geometric center target HUD (Premium Cyan #FF00F3FF) -->
+                                        <Grid IsHitTestVisible="False" Opacity="0.65">
+                                            <Grid.Style>
+                                                <Style TargetType="Grid">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsWebcamActive}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Grid.Style>
+                                            <Ellipse Width="180" Height="180" Stroke="#8000F3FF" StrokeThickness="0.8" StrokeDashArray="4,4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Ellipse Width="80" Height="80" Stroke="#FF00F3FF" StrokeThickness="1.5" StrokeDashArray="2,2" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Ellipse Width="8" Height="8" Fill="#FF00F3FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Rectangle Width="1" Fill="#8000F3FF" StrokeDashArray="3,3" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="0,10" />
+                                            <Rectangle Height="1" Fill="#8000F3FF" StrokeDashArray="3,3" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,0" />
+                                        </Grid>
+
+                                        <!-- Dynamic Co-Alignment Target Reticle (Premium Orange #FFF59E0B) -->
+                                        <Canvas IsHitTestVisible="False">
+                                            <Canvas.Style>
+                                                <Style TargetType="Canvas">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsWebcamActive}" Value="True" />
+                                                                <Condition Binding="{Binding IsCoAligned}" Value="True" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsWebcamActive}" Value="True" />
+                                                                <Condition Binding="{Binding IsCoAligning}" Value="True" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Canvas.Style>
+                                            <Grid Width="60" Height="60" Margin="-30,-30,0,0">
+                                                <Canvas.Left>
+                                                    <MultiBinding Converter="{StaticResource RatioToCoordinateConverter}">
+                                                        <Binding Path="AlignmentCenterX" />
+                                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Canvas}" />
+                                                    </MultiBinding>
+                                                </Canvas.Left>
+                                                <Canvas.Top>
+                                                    <MultiBinding Converter="{StaticResource RatioToCoordinateConverter}">
+                                                        <Binding Path="AlignmentCenterY" />
+                                                        <Binding Path="ActualHeight" RelativeSource="{RelativeSource AncestorType=Canvas}" />
+                                                    </MultiBinding>
+                                                </Canvas.Top>
+                                                <Ellipse Width="40" Height="40" Stroke="#FFF59E0B" StrokeThickness="1.5" StrokeDashArray="2,2" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Ellipse Width="16" Height="16" Stroke="#FFF59E0B" StrokeThickness="1.0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Ellipse Width="6" Height="6" Fill="#FFF59E0B" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Line X1="0" Y1="30" X2="60" Y2="30" Stroke="#FFF59E0B" StrokeThickness="1.0" StrokeDashArray="3,3" />
+                                                <Line X1="30" Y1="0" X2="30" Y2="60" Stroke="#FFF59E0B" StrokeThickness="1.0" StrokeDashArray="3,3" />
+                                            </Grid>
+                                        </Canvas>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </TabItem>
+
+                    <!-- Tab 2: Sky Dome Radar -->
+                    <TabItem Header="🌐 Sky Dome Radar">
+                        <Grid Background="#0c0c0e" MinWidth="320" MinHeight="320">
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                                <Grid Width="340" Height="340" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10">
+                                    <!-- Radial Sky Grid Canvas -->
+                                    <Canvas Width="300" Height="300" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
+                                        <!-- Concentric Grid Circles -->
+                                        <!-- Horizon (0°) -->
+                                        <Ellipse Canvas.Left="30" Canvas.Top="30" Width="240" Height="240" Stroke="#30818CF8" StrokeThickness="1.5" />
+                                        <!-- 30° Altitude -->
+                                        <Ellipse Canvas.Left="70" Canvas.Top="70" Width="160" Height="160" Stroke="#15818CF8" StrokeThickness="1" StrokeDashArray="4,4" />
+                                        <!-- 60° Altitude -->
+                                        <Ellipse Canvas.Left="110" Canvas.Top="110" Width="80" Height="80" Stroke="#15818CF8" StrokeThickness="1" StrokeDashArray="4,4" />
+                                        <!-- 85° Zenith Safety Limit -->
+                                        <Ellipse Canvas.Left="143.5" Canvas.Top="143.5" Width="13" Height="13" Stroke="#30EF4444" StrokeThickness="1.0" StrokeDashArray="2,2" />
+                                        <!-- Center (Zenith 90°) -->
+                                        <Ellipse Canvas.Left="148" Canvas.Top="148" Width="4" Height="4" Fill="#60818CF8" />
+
+                                        <!-- Altitude Labels -->
+                                        <TextBlock Text="30°" FontSize="8" Foreground="#50818CF8" Canvas.Left="152" Canvas.Top="72" />
+                                        <TextBlock Text="60°" FontSize="8" Foreground="#50818CF8" Canvas.Left="152" Canvas.Top="112" />
+                                        <TextBlock Text="85°" FontSize="8" Foreground="#50EF4444" Canvas.Left="152" Canvas.Top="136" />
+
+                                        <!-- Radial Azimuth lines -->
+                                        <Line X1="150" Y1="30" X2="150" Y2="270" Stroke="#15818CF8" StrokeThickness="1" />
+                                        <Line X1="30" Y1="150" X2="270" Y2="150" Stroke="#15818CF8" StrokeThickness="1" />
+                                        <Line X1="65" Y1="65" X2="235" Y2="235" Stroke="#08818CF8" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line X1="65" Y1="235" X2="235" Y2="65" Stroke="#08818CF8" StrokeThickness="1" StrokeDashArray="3,3" />
+
+                                        <!-- Azimuth Cardinal Labels -->
+                                        <TextBlock Text="N / 0°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="135" Canvas.Top="12" />
+                                        <TextBlock Text="S / 180°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="130" Canvas.Top="275" />
+                                        <TextBlock Text="E / 90°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="275" Canvas.Top="142" />
+                                        <TextBlock Text="W / 270°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="-6" Canvas.Top="142" />
+
+                                        <TextBlock Text="45°" FontSize="8.5" Foreground="Gray" Canvas.Left="238" Canvas.Top="50" />
+                                        <TextBlock Text="135°" FontSize="8.5" Foreground="Gray" Canvas.Left="235" Canvas.Top="238" />
+                                        <TextBlock Text="225°" FontSize="8.5" Foreground="Gray" Canvas.Left="45" Canvas.Top="238" />
+                                        <TextBlock Text="315°" FontSize="8.5" Foreground="Gray" Canvas.Left="45" Canvas.Top="50" />
+
+                                        <!-- 1. Horizon Obstacle Trace Polyline -->
+                                        <Polyline Points="{Binding RadarHorizonPoints}" Stroke="#FF00F3FF" StrokeThickness="2.5" StrokeLineJoin="Round" Opacity="0.85" />
+
+                                        <!-- 2. Interactive Dropped Pins Nodes -->
+                                        <ItemsControl ItemsSource="{Binding HorizonNodes}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas Width="300" Height="300" IsHitTestVisible="False" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding RadarX}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding RadarY}" />
+                                                    <Setter Property="Margin" Value="-4,-4,0,0" />
+                                                </Style>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Stroke="#FF0c0c0e" StrokeThickness="1.5" ToolTip="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- 3. Dynamic Mount Slew Crosshair -->
+                                        <Canvas IsHitTestVisible="False">
+                                            <Canvas.Style>
+                                                <Style TargetType="Canvas">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMountConnected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Canvas.Style>
+                                            <Grid Width="24" Height="24" Margin="-12,-12,0,0">
+                                                <Canvas.Left>
+                                                    <Binding Path="TelescopeRadarX" />
+                                                </Canvas.Left>
+                                                <Canvas.Top>
+                                                    <Binding Path="TelescopeRadarY" />
+                                                </Canvas.Top>
+                                                <Ellipse Width="18" Height="18" Stroke="#EF4444" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Ellipse Width="4" Height="4" Fill="#EF4444" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Line X1="0" Y1="12" X2="24" Y2="12" Stroke="#EF4444" StrokeThickness="1.0" />
+                                                <Line X1="12" Y1="0" X2="12" Y2="24" Stroke="#EF4444" StrokeThickness="1.0" />
+                                            </Grid>
+                                        </Canvas>
+                                    </Canvas>
+                                </Grid>
+                            </ScrollViewer>
+
+                            <!-- Shaded Legend Card in the Corner -->
+                            <Border CornerRadius="4" Background="#1A1A22" BorderThickness="1" BorderBrush="#2D2D38" Padding="8,6" Margin="10" VerticalAlignment="Bottom" HorizontalAlignment="Left" Opacity="0.8">
+                                <StackPanel Orientation="Vertical">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <Line X1="0" Y1="5" X2="12" Y2="5" Stroke="#FF00F3FF" StrokeThickness="2.5" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBlock Text="Horizon Obstruction Line" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <Ellipse Width="6" Height="6" Fill="#FFF59E0B" VerticalAlignment="Center" Margin="3,0,9,0" />
+                                        <TextBlock Text="Horizon Nodes (Pins)" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="6" Height="6" Stroke="#EF4444" StrokeThickness="1.5" VerticalAlignment="Center" Margin="3,0,9,0" />
+                                        <TextBlock Text="Telescope Pointer (Active)" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
                         </Grid>
-                    </Grid>
-                </Border>
+                    </TabItem>
+                </TabControl>
 
                 <!-- Column 1: Action center & Setting feeds -->
                 <Border Grid.Column="1" CornerRadius="8" Background="{DynamicResource MahApps.Brushes.Subtle}" Padding="12" BorderThickness="1" BorderBrush="#2A2A30">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" /> <!-- UVC Webcam Configuration -->
-                                <RowDefinition Height="Auto" /> <!-- Slew buttons -->
-                                <RowDefinition Height="Auto" /> <!-- Setup buttons -->
-                                <RowDefinition Height="Auto" /> <!-- Parameter details -->
-                                <RowDefinition Height="*" MinHeight="100" /> <!-- Console logs -->
+                                <RowDefinition Height="Auto" /> <!-- UVC Webcam Configuration (Row 0) -->
+                                <RowDefinition Height="Auto" /> <!-- Webcam Co-Alignment Assistant (Row 1) -->
+                                <RowDefinition Height="Auto" /> <!-- Main Active Mapping Controls (Row 2) -->
+                                <RowDefinition Height="Auto" /> <!-- Virtual Alt-Az Jogging Panel (Row 3) -->
+                                <RowDefinition Height="Auto" /> <!-- Hardware Parameters & Safety Checklist (Row 4) -->
+                                <RowDefinition Height="*" MinHeight="100" /> <!-- Console logs (Row 5) -->
                             </Grid.RowDefinitions>
                             <Grid.Resources>
                                 <Style x:Key="ActionBtnStyle" TargetType="Button">
@@ -204,7 +396,7 @@
                                 </Style>
                             </Grid.Resources>
 
-                            <!-- Section 0: UVC Webcam Configuration -->
+                            <!-- Row 0: UVC Webcam Configuration -->
                             <Border Grid.Row="0" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
                                 <StackPanel Orientation="Vertical">
                                     <!-- Webcam Header with Dot Status Indicator -->
@@ -252,8 +444,50 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Section 1: Main Active Mapping Controls -->
-                            <Grid Grid.Row="1" Margin="0,0,0,12">
+                            <!-- Row 1: Webcam Co-Alignment Assistant -->
+                            <Border Grid.Row="1" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="Webcam Co-Alignment Assistant" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                                    
+                                    <!-- Co-Alignment Instruction Tip -->
+                                    <Border CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,0,0,8">
+                                        <TextBlock Text="Align the webcam feed with your primary telescope axis. Center a target in your main camera, click the same target in the webcam view, and save." FontSize="9.5" Foreground="DarkGray" TextWrapping="Wrap" />
+                                    </Border>
+                                    
+                                    <!-- Co-Alignment Status Badge and Target Center readout -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="Center Ratio: " FontSize="9.5" Foreground="Gray" />
+                                            <TextBlock Text="{Binding AlignmentCenterX, StringFormat={}{0:F3}}" FontSize="9.5" FontWeight="SemiBold" Foreground="#FFF59E0B" />
+                                            <TextBlock Text=", " FontSize="9.5" Foreground="Gray" />
+                                            <TextBlock Text="{Binding AlignmentCenterY, StringFormat={}{0:F3}}" FontSize="9.5" FontWeight="SemiBold" Foreground="#FFF59E0B" />
+                                        </StackPanel>
+                                        
+                                        <Border Grid.Column="1" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="6,2" VerticalAlignment="Center">
+                                            <TextBlock Text="ALIGNED" FontSize="8.5" FontWeight="Bold" Foreground="#22C55E" VerticalAlignment="Center" Visibility="{Binding IsCoAligned, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Co-Alignment Buttons -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Start" Command="{Binding StartCoAlignmentCommand}" Height="28" Background="#8B5CF6" Margin="0,0,4,0" FontSize="11" ToolTip="Start Co-Alignment assistant" />
+                                        <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Save" Command="{Binding SaveCoAlignmentCommand}" IsEnabled="{Binding IsCoAligning}" Height="28" Background="#22C55E" Margin="4,0,4,0" FontSize="11" ToolTip="Save co-alignment coordinate" />
+                                        <Button Grid.Column="2" Style="{StaticResource ActionBtnStyle}" Content="Reset" Command="{Binding ResetCoAlignmentCommand}" Height="28" Background="#E11D48" Margin="4,0,0,0" FontSize="11" ToolTip="Reset co-alignment to center" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Row 2: Main Active Mapping Controls -->
+                            <Grid Grid.Row="2" Margin="0,0,0,12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -265,8 +499,8 @@
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Start and Stop Mapping -->
-                                <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Start Mapping Session" Command="{Binding StartMappingCommand}" Height="34" IsEnabled="{Binding CanStart}" Background="#22C55E" Margin="0,0,4,6" />
-                                <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Stop Session" Command="{Binding StopMappingCommand}" Height="34" IsEnabled="{Binding IsRunning}" Background="#EF4444" Margin="4,0,0,6" />
+                                <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Start Mapping" Command="{Binding StartMappingCommand}" Height="34" IsEnabled="{Binding CanStart}" Background="#22C55E" Margin="0,0,4,6" />
+                                <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Stop Mapping" Command="{Binding StopMappingCommand}" Height="34" IsEnabled="{Binding IsRunning}" Background="#EF4444" Margin="4,0,0,6" />
 
                                 <!-- Placed Node interactions -->
                                 <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource ActionBtnStyle}" Content="Drop Horizon Pin [Spacebar]" Command="{Binding DropPinCommand}" Height="36" IsEnabled="{Binding IsRunning}" Background="#3B82F6" Margin="0,0,0,6" />
@@ -275,12 +509,14 @@
                                 <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Clear All Pins" Command="{Binding ClearPinsCommand}" Height="28" IsEnabled="{Binding IsRunning}" Background="#E11D48" Margin="4,0,0,0" FontSize="11" />
                             </Grid>
 
-                            <!-- Section 2: Virtual Alt-Az Jogging Panel -->
-                            <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,0,0,12">
+                            <!-- Row 3: Virtual Alt-Az Jogging Panel (5x5 Grid) -->
+                            <StackPanel Grid.Row="3" Orientation="Vertical" Margin="0,0,0,12">
                                 <TextBlock Text="Virtual Alt-Az Jogging" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,6" />
                                 
-                                <Grid Width="160" Height="100" HorizontalAlignment="Center">
+                                <Grid Width="180" Height="150" HorizontalAlignment="Center">
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="*" />
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="*" />
@@ -289,28 +525,50 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Jog Buttons (Up/Down for Alt, Left/Right for Az, Diagonals) -->
-                                    <Button Grid.Row="0" Grid.Column="1" Content="▲" Command="{Binding JogNorthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt+" />
-                                    <Button Grid.Row="1" Grid.Column="0" Content="◀" Command="{Binding JogWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az-" />
-                                    <Button Grid.Row="1" Grid.Column="2" Content="▶" Command="{Binding JogEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az+" />
-                                    <Button Grid.Row="2" Grid.Column="1" Content="▼" Command="{Binding JogSouthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt-" />
-                                    
-                                    <Button Grid.Row="0" Grid.Column="0" Content="↖" Command="{Binding JogNorthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az-" />
-                                    <Button Grid.Row="0" Grid.Column="2" Content="↗" Command="{Binding JogNorthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az+" />
-                                    <Button Grid.Row="2" Grid.Column="0" Content="↙" Command="{Binding JogSouthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az-" />
-                                    <Button Grid.Row="2" Grid.Column="2" Content="↘" Command="{Binding JogSouthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az+" />
-                                    
-                                    <!-- Center Home Button -->
-                                    <Button Grid.Row="1" Grid.Column="1" Content="⌂" Command="{Binding HomeMountCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2563EB" ToolTip="Home Mount" FontSize="14" />
+                                    <!-- Row 0: Double-Arrow Diagonals & North -->
+                                    <Button Grid.Row="0" Grid.Column="0" Content="↖↖" Command="{Binding DoubleJogNorthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az-" FontSize="9" />
+                                    <Button Grid.Row="0" Grid.Column="2" Content="▲▲" Command="{Binding DoubleJogNorthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt+" FontSize="9" />
+                                    <Button Grid.Row="0" Grid.Column="4" Content="↗↗" Command="{Binding DoubleJogNorthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az+" FontSize="9" />
+
+                                    <!-- Row 1: Single-Arrow Diagonals & North -->
+                                    <Button Grid.Row="1" Grid.Column="1" Content="↖" Command="{Binding JogNorthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az-" />
+                                    <Button Grid.Row="1" Grid.Column="2" Content="▲" Command="{Binding JogNorthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt+" />
+                                    <Button Grid.Row="1" Grid.Column="3" Content="↗" Command="{Binding JogNorthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az+" />
+
+                                    <!-- Row 2: Double/Single West, Home, Single/Double East -->
+                                    <Button Grid.Row="2" Grid.Column="0" Content="◀◀" Command="{Binding DoubleJogWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az-" FontSize="9" />
+                                    <Button Grid.Row="2" Grid.Column="1" Content="◀" Command="{Binding JogWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az-" />
+                                    <Button Grid.Row="2" Grid.Column="2" Content="⌂" Command="{Binding HomeMountCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2563EB" ToolTip="Home Mount" FontSize="14" />
+                                    <Button Grid.Row="2" Grid.Column="3" Content="▶" Command="{Binding JogEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az+" />
+                                    <Button Grid.Row="2" Grid.Column="4" Content="▶▶" Command="{Binding DoubleJogEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az+" FontSize="9" />
+
+                                    <!-- Row 3: Single-Arrow Diagonals & South -->
+                                    <Button Grid.Row="3" Grid.Column="1" Content="↙" Command="{Binding JogSouthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az-" />
+                                    <Button Grid.Row="3" Grid.Column="2" Content="▼" Command="{Binding JogSouthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt-" />
+                                    <Button Grid.Row="3" Grid.Column="3" Content="↘" Command="{Binding JogSouthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az+" />
+
+                                    <!-- Row 4: Double-Arrow Diagonals & South -->
+                                    <Button Grid.Row="4" Grid.Column="0" Content="↙↙" Command="{Binding DoubleJogSouthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az-" FontSize="9" />
+                                    <Button Grid.Row="4" Grid.Column="2" Content="▼▼" Command="{Binding DoubleJogSouthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt-" FontSize="9" />
+                                    <Button Grid.Row="4" Grid.Column="4" Content="↘↘" Command="{Binding DoubleJogSouthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az+" FontSize="9" />
                                 </Grid>
+
+                                <!-- Emergency Stop Button -->
+                                <Button Command="{Binding StopMountCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#EF4444" Height="28" Margin="0,8,0,0" ToolTip="EMERGENCY JOG SLEW STOP">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="🛑" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="EMERGENCY STOP" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
 
-                            <!-- Section 3: Hardware Parameters & Safety Checklist -->
-                            <Grid Grid.Row="3" Margin="0,0,0,8">
+                            <!-- Row 4: Hardware Parameters & Safety Checklist -->
+                            <Grid Grid.Row="4" Margin="0,0,0,8">
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
@@ -331,31 +589,39 @@
                                     <TextBox Text="{Binding StepSizeAz, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
                                 </StackPanel>
 
-                                <!-- Focal length override -->
-                                <StackPanel Grid.Row="0" Grid.Column="2" Margin="4,0,0,6">
-                                    <TextBlock Text="Focal L. (mm)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
-                                    <TextBox Text="{Binding FocalLengthOverride, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+                                <!-- Counter-rotation checkbox toggle -->
+                                <StackPanel Grid.Row="0" Grid.Column="2" Margin="4,0,0,6" ToolTip="Counter-rotates the webcam view as the mount tracks/slews.">
+                                    <TextBlock Text="🔄 Counter-Rotate" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                                    <CheckBox IsChecked="{Binding IsCounterRotationEnabled, UpdateSourceTrigger=PropertyChanged}" Content="Enabled" Foreground="DarkGray" FontSize="10.5" Cursor="Hand" Height="24" VerticalContentAlignment="Center" VerticalAlignment="Center" />
                                 </StackPanel>
 
                                 <!-- Safety exclusions checklist -->
-                                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,4,0,6">
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0" ToolTip="Enables/disables the 15° Solar proximity lockout.">
-                                        <TextBlock Text="Solar Safety Zone" Foreground="#FBBF24" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,4,0,6" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0" ToolTip="Enables/disables the 15° Solar proximity lockout.">
+                                        <TextBlock Text="Solar Safety" Foreground="#FBBF24" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
                                         <CheckBox IsChecked="{Binding EnableSolarSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0" ToolTip="Enables/disables the 85° Zenith proximity lockout.">
-                                        <TextBlock Text="Zenith Lockout" Foreground="#FCA5A5" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0" ToolTip="Enables/disables the 85° Zenith proximity lockout.">
+                                        <TextBlock Text="Zenith Lock" Foreground="#FCA5A5" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
                                         <CheckBox IsChecked="{Binding EnableZenithSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" ToolTip="Locks altitude to Horizon only (Azimuth sweeps).">
-                                        <TextBlock Text="Horizon Lock" Foreground="#818CF8" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                        <TextBlock Text="Horiz. Lock" Foreground="#818CF8" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
                                         <CheckBox IsChecked="{Binding HorizonLockEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </StackPanel>
+
+                                <!-- Field rotation angle readout -->
+                                <StackPanel Grid.Row="1" Grid.Column="2" Margin="4,4,0,6" ToolTip="Calculated Field Rotation Angle (Parallactic Angle)">
+                                    <TextBlock Text="Rot. Angle" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                                    <Border CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Height="24" Padding="6,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding WebcamImageRotationAngle, StringFormat={}{0:F1}°}" FontSize="10" FontWeight="Bold" Foreground="#FF00F3FF" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                    </Border>
+                                </StackPanel>
                             </Grid>
 
-                            <!-- Section 4: Log console console feeds -->
-                            <Border Grid.Row="4" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,4,0,4">
+                            <!-- Row 5: Log console feeds -->
+                            <Border Grid.Row="5" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,4,0,4">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <StackPanel>
                                         <TextBlock Text="System Activity Logs" FontSize="9" FontWeight="Bold" Foreground="Gray" Margin="0,0,0,4" />

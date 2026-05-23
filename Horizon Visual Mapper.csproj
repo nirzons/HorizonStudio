@@ -22,15 +22,19 @@
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="
-if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot; (
-  mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot;
-)
 if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper&quot; (
   mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper&quot;
+) else (
+  echo &quot;Cleaning existing HorizonVisualMapper plugin directory...&quot;
+  del /q /s &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper\*&quot; &gt;nul 2&gt;&amp;1
+  for /d %%x in (&quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper\*&quot;) do rmdir /q /s &quot;%%x&quot; &gt;nul 2&gt;&amp;1
 )
 
-echo &quot;Copying built HVM binaries to 3.0.0 directory&quot;
-xcopy &quot;$(TargetDir)*.*&quot; &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper&quot; /y /i /e
+echo &quot;Copying essential HVM plugin files...&quot;
+copy /y &quot;$(TargetDir)NirZonshine.NINA.HorizonVisualMapper.dll&quot; &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper\&quot;
+copy /y &quot;$(TargetDir)NirZonshine.NINA.HorizonVisualMapper.pdb&quot; &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper\&quot;
+copy /y &quot;$(TargetDir)FlashCap.dll&quot; &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper\&quot;
+copy /y &quot;$(TargetDir)FlashCap.Core.dll&quot; &quot;%25localappdata%25\NINA\Plugins\3.0.0\HorizonVisualMapper\&quot;
   " />
   </Target>
 </Project>

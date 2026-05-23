@@ -9,7 +9,6 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
     public class MappingCommands {
         private readonly HorizonMapperDockableVM _vm;
         private readonly ITelescopeMediator _telescopeMediator;
-        private readonly Stack<HorizonNode> _undoStack = new Stack<HorizonNode>();
 
         public ICommand StartMappingCommand { get; }
         public ICommand StopMappingCommand { get; }
@@ -79,27 +78,28 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
             double az = _vm.CurrentAz;
 
             var node = new HorizonNode(az, alt);
-            _undoStack.Push(node);
+            _vm.HorizonNodes.Add(node);
 
             _vm.LastNodeAlt = alt;
             _vm.LastNodeAz = az;
-            _vm.NodeCount = _undoStack.Count;
+            _vm.NodeCount = _vm.HorizonNodes.Count;
             _vm.LastNodeText = node.ToString();
 
             _vm.Log($"[Pin Placed] Added Horizon Node - Alt: {alt:F2}°, Az: {az:F2}° (Total: {_vm.NodeCount})");
         }
 
         public void UndoPin() {
-            if (_undoStack.Count == 0) {
+            if (_vm.HorizonNodes.Count == 0) {
                 _vm.Log("[Warning] Undo stack is empty.");
                 return;
             }
 
-            var removed = _undoStack.Pop();
-            _vm.NodeCount = _undoStack.Count;
+            var removed = _vm.HorizonNodes[_vm.HorizonNodes.Count - 1];
+            _vm.HorizonNodes.RemoveAt(_vm.HorizonNodes.Count - 1);
+            _vm.NodeCount = _vm.HorizonNodes.Count;
 
-            if (_undoStack.Count > 0) {
-                var top = _undoStack.Peek();
+            if (_vm.HorizonNodes.Count > 0) {
+                var top = _vm.HorizonNodes[_vm.HorizonNodes.Count - 1];
                 _vm.LastNodeAlt = top.Altitude;
                 _vm.LastNodeAz = top.Azimuth;
                 _vm.LastNodeText = top.ToString();
@@ -113,9 +113,9 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
         }
 
         public void ClearPins() {
-            if (_undoStack.Count == 0) return;
+            if (_vm.HorizonNodes.Count == 0) return;
 
-            _undoStack.Clear();
+            _vm.HorizonNodes.Clear();
             _vm.NodeCount = 0;
             _vm.LastNodeAlt = 0.0;
             _vm.LastNodeAz = 0.0;
