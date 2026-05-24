@@ -12,6 +12,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
     public class MappingCommands {
         private readonly HorizonMapperDockableVM _vm;
         private readonly ITelescopeMediator _telescopeMediator;
+        private readonly Stack<HorizonNode> _pinHistory = new Stack<HorizonNode>();
 
         public ICommand StartMappingCommand { get; }
         public ICommand StopMappingCommand { get; }
@@ -167,7 +168,14 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             double az = _vm.CurrentAz;
 
             var node = new HorizonNode(az, alt);
-            _vm.HorizonNodes.Add(node);
+            
+            // Live Sorting: Insert in Azimuth-sorted order
+            int insertIndex = 0;
+            while (insertIndex < _vm.HorizonNodes.Count && _vm.HorizonNodes[insertIndex].Azimuth < node.Azimuth) {
+                insertIndex++;
+            }
+            _vm.HorizonNodes.Insert(insertIndex, node);
+            _pinHistory.Push(node);
 
             _vm.LastNodeAlt = alt;
             _vm.LastNodeAz = az;
@@ -178,17 +186,17 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
         }
 
         public void UndoPin() {
-            if (_vm.HorizonNodes.Count == 0) {
+            if (_pinHistory.Count == 0) {
                 _vm.Log("[Warning] Undo stack is empty.");
                 return;
             }
 
-            var removed = _vm.HorizonNodes[_vm.HorizonNodes.Count - 1];
-            _vm.HorizonNodes.RemoveAt(_vm.HorizonNodes.Count - 1);
+            var removed = _pinHistory.Pop();
+            _vm.HorizonNodes.Remove(removed);
             _vm.NodeCount = _vm.HorizonNodes.Count;
 
-            if (_vm.HorizonNodes.Count > 0) {
-                var top = _vm.HorizonNodes[_vm.HorizonNodes.Count - 1];
+            if (_pinHistory.Count > 0) {
+                var top = _pinHistory.Peek();
                 _vm.LastNodeAlt = top.Altitude;
                 _vm.LastNodeAz = top.Azimuth;
                 _vm.LastNodeText = top.ToString();
@@ -205,6 +213,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             if (_vm.HorizonNodes.Count == 0) return;
 
             _vm.HorizonNodes.Clear();
+            _pinHistory.Clear();
             _vm.NodeCount = 0;
             _vm.LastNodeAlt = 0.0;
             _vm.LastNodeAz = 0.0;
