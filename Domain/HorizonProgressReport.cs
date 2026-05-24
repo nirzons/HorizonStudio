@@ -1,4 +1,4 @@
-namespace NirZonshine.NINA.HorizonVisualMapper.Domain {
+namespace NirZonshine.NINA.HorizonStudio.Domain {
     /// <summary>
     /// Data Transfer Object (DTO) conveying background mapping and hardware status reports
     /// to the reactive WPF view model dispatcher.

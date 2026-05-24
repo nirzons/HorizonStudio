@@ -10,16 +10,16 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
 // [MANDATORY] The name of your plugin
-[assembly: AssemblyTitle("Horizon Visual Mapper")]
+[assembly: AssemblyTitle("Horizon Studio")]
 
 // [MANDATORY] A short description of your plugin
-[assembly: AssemblyDescription("Horizon Visual Mapper (HVM) 2.0 for custom local horizon modeling")]
+[assembly: AssemblyDescription("Horizon Studio 2.0 for custom local horizon modeling")]
 
 // Your name
 [assembly: AssemblyCompany("Nir Zonshine")]
 
 // The product name that this plugin is part of
-[assembly: AssemblyProduct("Horizon Visual Mapper")]
+[assembly: AssemblyProduct("Horizon Studio")]
 [assembly: AssemblyCopyright("Copyright © 2026 Nir Zonshine")]
 
 // The minimum Version of N.I.N.A. that this plugin is compatible with
@@ -28,7 +28,7 @@ using System.Runtime.InteropServices;
 // The license your plugin code is using
 [assembly: AssemblyMetadata("License", "MIT")]
 [assembly: AssemblyMetadata("LicenseURL", "https://opensource.org/licenses/MIT")]
-[assembly: AssemblyMetadata("Repository", "https://github.com/nirzons/HorizonVisualMapper")]
+[assembly: AssemblyMetadata("Repository", "https://github.com/nirzons/HorizonStudio")]
 
 [assembly: ComVisible(false)]
 [assembly: AssemblyConfiguration("")]

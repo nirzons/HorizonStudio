@@ -7,7 +7,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
-namespace NirZonshine.NINA.HorizonVisualMapper {
+namespace NirZonshine.NINA.HorizonStudio {
     /// <summary>
     /// Code-behind for the Options.xaml ResourceDictionary.
     /// Exports the resource dictionary into N.I.N.A.'s theme assembly locator using MEF.

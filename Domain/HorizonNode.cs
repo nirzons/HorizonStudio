@@ -1,6 +1,6 @@
 using System;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.Domain {
+namespace NirZonshine.NINA.HorizonStudio.Domain {
     /// <summary>
     /// Represents a single terrestrial obstruction node on the horizon.
     /// Coordinates are in degrees.

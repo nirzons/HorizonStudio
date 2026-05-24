@@ -6,9 +6,9 @@ using System.Threading;
 using System.Windows.Input;
 using Microsoft.Win32;
 using NINA.Equipment.Interfaces.Mediator;
-using NirZonshine.NINA.HorizonVisualMapper.Domain;
+using NirZonshine.NINA.HorizonStudio.Domain;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
+namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
     public class MappingCommands {
         private readonly HorizonMapperDockableVM _vm;
         private readonly ITelescopeMediator _telescopeMediator;

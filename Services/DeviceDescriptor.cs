@@ -1,6 +1,6 @@
 using System;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.Services {
+namespace NirZonshine.NINA.HorizonStudio.Services {
     public class DeviceDescriptor : IEquatable<DeviceDescriptor> {
         public string Name { get; }
         public string DevicePath { get; }

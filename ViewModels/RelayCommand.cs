@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Input;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
+namespace NirZonshine.NINA.HorizonStudio.ViewModels {
     public class RelayCommand : ICommand {
         private readonly Action<object> execute;
         private readonly Func<object, bool> canExecute;

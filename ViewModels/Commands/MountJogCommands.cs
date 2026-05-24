@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Profile.Interfaces;
-using NirZonshine.NINA.HorizonVisualMapper.Services;
+using NirZonshine.NINA.HorizonStudio.Services;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands {
+namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
     public class MountJogCommands {
         private readonly HorizonMapperDockableVM _vm;
         private readonly ITelescopeMediator _telescopeMediator;

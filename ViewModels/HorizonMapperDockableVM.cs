@@ -20,11 +20,11 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Media.Imaging;
 using System.Linq;
-using NirZonshine.NINA.HorizonVisualMapper.Domain;
-using NirZonshine.NINA.HorizonVisualMapper.Services;
-using NirZonshine.NINA.HorizonVisualMapper.ViewModels.Commands;
+using NirZonshine.NINA.HorizonStudio.Domain;
+using NirZonshine.NINA.HorizonStudio.Services;
+using NirZonshine.NINA.HorizonStudio.ViewModels.Commands;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
+namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
     /// <summary>
     /// Contract for the code-behind's image-click handler.
@@ -98,7 +98,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             _cameraMediator.RegisterConsumer(this);
             _telescopeMediator.RegisterConsumer(this);
 
-            Title = "Horizon Visual Mapper";
+            Title = "Horizon Studio";
 
             _settingsManager = new SettingsManager(_profileService);
             _settingsManager.PropertyChanged += SettingsManager_PropertyChanged;
@@ -630,7 +630,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
                         }
                     }
                 } catch (Exception ex) {
-                    Logger.Error($"[Horizon Visual Mapper] Rotation calculation failed: {ex.Message}");
+                    Logger.Error($"[Horizon Studio] Rotation calculation failed: {ex.Message}");
                 }
             }
 
@@ -648,7 +648,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         // This prevents unbounded memory growth during long mapping sessions.
         public void Log(string message) {
             var formatted = $"[{DateTime.Now:HH:mm:ss}] {message}";
-            Logger.Info($"[Horizon Visual Mapper] {message}");
+            Logger.Info($"[Horizon Studio] {message}");
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
                 _logBuffer.Enqueue(formatted);
                 if (_logBuffer.Count > MaxLogLines) {
@@ -762,7 +762,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
                     }));
                 }
             } catch (Exception ex) {
-                Logger.Debug($"[Horizon Visual Mapper] Frame decoding failed: {ex.Message}");
+                Logger.Debug($"[Horizon Studio] Frame decoding failed: {ex.Message}");
             }
         }
 

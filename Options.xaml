@@ -1,21 +1,21 @@
 <ResourceDictionary
-    x:Class="NirZonshine.NINA.HorizonVisualMapper.Options"
+    x:Class="NirZonshine.NINA.HorizonStudio.Options"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
-    xmlns:local="clr-namespace:NirZonshine.NINA.HorizonVisualMapper"
-    xmlns:vm="clr-namespace:NirZonshine.NINA.HorizonVisualMapper.ViewModels">
+    xmlns:local="clr-namespace:NirZonshine.NINA.HorizonStudio"
+    xmlns:vm="clr-namespace:NirZonshine.NINA.HorizonStudio.ViewModels">
 
     <!-- Global HVM Options DataTemplate -->
-    <DataTemplate x:Key="Horizon Visual Mapper_Options">
+    <DataTemplate x:Key="Horizon Studio_Options">
         <StackPanel Orientation="Vertical" Margin="10">
-            <TextBlock Text="Horizon Visual Mapper Settings" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,10" />
-            <TextBlock Text="No global configuration is required. All settings can be adjusted directly from the Horizon Visual Mapper panel in the Imaging screen." Foreground="#999" TextWrapping="Wrap" />
+            <TextBlock Text="Horizon Studio Settings" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,10" />
+            <TextBlock Text="No global configuration is required. All settings can be adjusted directly from the Horizon Studio panel in the Imaging screen." Foreground="#999" TextWrapping="Wrap" />
         </StackPanel>
     </DataTemplate>
 
     <!-- Main Dockable UI DataTemplate (Loaded in N.I.N.A Imaging Screen) -->
-    <DataTemplate x:Key="NirZonshine.NINA.HorizonVisualMapper.ViewModels.HorizonMapperDockableVM_Dockable">
+    <DataTemplate x:Key="NirZonshine.NINA.HorizonStudio.ViewModels.HorizonMapperDockableVM_Dockable">
         <DataTemplate.Resources>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <local:RenderedImageSizeConverter x:Key="RenderedImageSizeConverter" />
@@ -37,7 +37,7 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Orientation="Vertical">
-                            <TextBlock Text="Horizon Visual Mapper (HVM)" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" />
+                            <TextBlock Text="Horizon Studio" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" />
                             <TextBlock Text="Trace terrestrial obstacles in daylight using visual guides to automatically generate custom N.I.N.A. horizon profiles." FontSize="11" Foreground="Gray" Margin="0,4,0,0" TextWrapping="Wrap" />
                         </StackPanel>
                         <Border Grid.Column="1" CornerRadius="4" Background="#161b22" BorderThickness="1" BorderBrush="{Binding StatusIndicatorColor}" Padding="8,4" VerticalAlignment="Center">

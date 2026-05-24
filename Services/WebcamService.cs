@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using FlashCap;
 using NINA.Core.Utility;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.Services {
+namespace NirZonshine.NINA.HorizonStudio.Services {
     public class WebcamService : IWebcamService, IDisposable {
         private readonly object _stateLock = new object();
         private CaptureDevice _captureDevice;
@@ -56,7 +56,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                     .Select(d => new DeviceDescriptor(d.Name, d.Identity.ToString()))
                     .ToList();
             } catch (Exception ex) {
-                Logger.Error($"[Horizon Visual Mapper] Failed to enumerate webcams: {ex.Message}");
+                Logger.Error($"[Horizon Studio] Failed to enumerate webcams: {ex.Message}");
                 return Enumerable.Empty<DeviceDescriptor>();
             }
         }
@@ -95,7 +95,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                     throw new InvalidOperationException("No valid video formats/characteristics supported by this webcam.");
                 }
 
-                Logger.Info($"[Horizon Visual Mapper] Opening webcam: {descriptor.Name} ({characteristics.Width}x{characteristics.Height}, {characteristics.PixelFormat})");
+                Logger.Info($"[Horizon Studio] Opening webcam: {descriptor.Name} ({characteristics.Width}x{characteristics.Height}, {characteristics.PixelFormat})");
 
                 // Open the device with TranscodeFormats.Auto so it automatically converts YUV to standard RGB DIB (BMP)
                 var device = await descriptor.OpenAsync(
@@ -111,7 +111,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                                 onFrameCaptured(frameData);
                             }
                         } catch (Exception ex) {
-                            Logger.Error($"[Horizon Visual Mapper] Error in frame capture callback: {ex.Message}");
+                            Logger.Error($"[Horizon Studio] Error in frame capture callback: {ex.Message}");
                         }
                     });
 
@@ -128,10 +128,10 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                 // Start active streaming
                 await _captureDevice.StartAsync();
                 CurrentState = WebcamState.Streaming;
-                Logger.Info("[Horizon Visual Mapper] Webcam stream started successfully.");
+                Logger.Info("[Horizon Studio] Webcam stream started successfully.");
 
             } catch (Exception ex) {
-                Logger.Error($"[Horizon Visual Mapper] Failed to start webcam: {ex.Message}");
+                Logger.Error($"[Horizon Studio] Failed to start webcam: {ex.Message}");
                 lock (_stateLock) {
                     _captureDevice = null;
                     CurrentState = WebcamState.Error;
@@ -154,11 +154,11 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
 
             if (deviceToDispose != null) {
                 try {
-                    Logger.Info("[Horizon Visual Mapper] Stopping webcam stream (Synchronous)...");
+                    Logger.Info("[Horizon Studio] Stopping webcam stream (Synchronous)...");
                     deviceToDispose.Dispose();
-                    Logger.Info("[Horizon Visual Mapper] Webcam stream stopped successfully.");
+                    Logger.Info("[Horizon Studio] Webcam stream stopped successfully.");
                 } catch (Exception ex) {
-                    Logger.Error($"[Horizon Visual Mapper] Error during synchronous webcam stop: {ex.Message}");
+                    Logger.Error($"[Horizon Studio] Error during synchronous webcam stop: {ex.Message}");
                 }
             }
         }
@@ -176,12 +176,12 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
 
             if (deviceToDispose != null) {
                 try {
-                    Logger.Info("[Horizon Visual Mapper] Stopping webcam stream (Asynchronous)...");
+                    Logger.Info("[Horizon Studio] Stopping webcam stream (Asynchronous)...");
                     await deviceToDispose.StopAsync();
                     deviceToDispose.Dispose();
-                    Logger.Info("[Horizon Visual Mapper] Webcam stream stopped successfully.");
+                    Logger.Info("[Horizon Studio] Webcam stream stopped successfully.");
                 } catch (Exception ex) {
-                    Logger.Error($"[Horizon Visual Mapper] Error during asynchronous webcam stop: {ex.Message}");
+                    Logger.Error($"[Horizon Studio] Error during asynchronous webcam stop: {ex.Message}");
                 }
             }
         }

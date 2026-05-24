@@ -10,7 +10,7 @@ using NINA.Equipment.Model;
 using NINA.Core.Model.Equipment;
 using NINA.Equipment.Equipment.MyTelescope;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.Services {
+namespace NirZonshine.NINA.HorizonStudio.Services {
     public class SafetyManager : INotifyPropertyChanged, IDisposable, ITelescopeConsumer {
         private readonly IProfileService _profileService;
         private readonly ITelescopeMediator _telescopeMediator;
@@ -125,7 +125,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
 
                 SafetyMessage = "All safety systems nominal.";
             } catch (Exception ex) {
-                Logger.Error($"[Horizon Visual Mapper] Safety heartbeat failed: {ex.Message}");
+                Logger.Error($"[Horizon Studio] Safety heartbeat failed: {ex.Message}");
             }
         }
 
@@ -163,7 +163,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                     _telescopeMediator.StopSlew();
                 }
             } catch (Exception ex) {
-                Logger.Error($"[Horizon Visual Mapper] Emergency Stop failed: {ex.Message}");
+                Logger.Error($"[Horizon Studio] Emergency Stop failed: {ex.Message}");
             }
         }
 

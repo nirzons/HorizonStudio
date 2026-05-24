@@ -1,4 +1,4 @@
-namespace NirZonshine.NINA.HorizonVisualMapper.Services {
+namespace NirZonshine.NINA.HorizonStudio.Services {
     public enum WebcamState {
         Disconnected,
         Connecting,

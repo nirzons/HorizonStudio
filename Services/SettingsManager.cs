@@ -5,7 +5,7 @@ using NINA.Profile;
 using NINA.Profile.Interfaces;
 using NINA.Core.Utility;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.Services {
+namespace NirZonshine.NINA.HorizonStudio.Services {
     public class SettingsManager : INotifyPropertyChanged, IDisposable {
         private bool _disposed;
         private readonly IProfileService _profileService;
@@ -188,7 +188,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
 
                 OnPropertyChanged(string.Empty);
             } catch (Exception ex) {
-                Logger.Error($"[Horizon Visual Mapper] Failed to load settings: {ex.Message}");
+                Logger.Error($"[Horizon Studio] Failed to load settings: {ex.Message}");
             }
         }
 
@@ -202,7 +202,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                 else if (value is bool b) _accessor.SetValueBoolean(key, b);
                 else if (value is string s) _accessor.SetValueString(key, s);
             } catch (Exception ex) {
-                Logger.Error($"[Horizon Visual Mapper] Failed to save setting '{key}': {ex.Message}");
+                Logger.Error($"[Horizon Studio] Failed to save setting '{key}': {ex.Message}");
             }
         }
 

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace NirZonshine.NINA.HorizonVisualMapper.Services {
+namespace NirZonshine.NINA.HorizonStudio.Services {
     public interface IWebcamService : IDisposable {
         IEnumerable<DeviceDescriptor> GetAvailableCameras();
         WebcamState CurrentState { get; }
