@@ -58,3 +58,6 @@ Desktop.ini
 
 # Ignore scratch tools/tests directory
 scratch/
+
+# Ignore local design documents
+future_features.md

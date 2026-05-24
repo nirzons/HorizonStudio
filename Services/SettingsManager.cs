@@ -35,6 +35,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
         private double _alignmentCenterY = 0.5;
         private bool _isCoAligned = false;
         private bool _isCounterRotationEnabled = false;
+        private double _cameraRotationOffset = 0.0;
         private bool _isExactPositionEnabled = false;
 
         public SettingsManager(IProfileService profileService) {
@@ -151,6 +152,11 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
             set { if (_isCounterRotationEnabled != value) { _isCounterRotationEnabled = value; SaveSetting(nameof(IsCounterRotationEnabled), value); OnPropertyChanged(); } }
         }
 
+        public double CameraRotationOffset {
+            get => _cameraRotationOffset;
+            set { if (_cameraRotationOffset != value) { _cameraRotationOffset = value; SaveSetting(nameof(CameraRotationOffset), value); OnPropertyChanged(); } }
+        }
+
         public bool IsExactPositionEnabled {
             get => _isExactPositionEnabled;
             set { if (_isExactPositionEnabled != value) { _isExactPositionEnabled = value; SaveSetting(nameof(IsExactPositionEnabled), value); OnPropertyChanged(); } }
@@ -177,6 +183,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.Services {
                 _alignmentCenterY = _accessor.GetValueDouble(nameof(AlignmentCenterY), 0.5);
                 _isCoAligned = _accessor.GetValueBoolean(nameof(IsCoAligned), false);
                 _isCounterRotationEnabled = _accessor.GetValueBoolean(nameof(IsCounterRotationEnabled), false);
+                _cameraRotationOffset = _accessor.GetValueDouble(nameof(CameraRotationOffset), 0.0);
                 _isExactPositionEnabled = _accessor.GetValueBoolean(nameof(IsExactPositionEnabled), false);
 
                 OnPropertyChanged(string.Empty);

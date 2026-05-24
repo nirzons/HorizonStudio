@@ -211,6 +211,8 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() => {
                 RaisePropertyChanged(nameof(IsMountConnected));
                 RaisePropertyChanged(nameof(CanStart));
+                RaisePropertyChanged(nameof(IsSlewing));
+                RaisePropertyChanged(nameof(CanDropPin));
                 if (IsMountConnected && deviceInfo != null) {
                     CurrentAlt = deviceInfo.Altitude;
                     CurrentAz = deviceInfo.Azimuth;
@@ -223,8 +225,10 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
 
         public bool IsCameraConnected => (_currentCameraInfo?.Connected ?? _cameraMediator?.GetInfo()?.Connected ?? false);
         public bool IsMountConnected => (_currentTelescopeInfo?.Connected ?? _telescopeMediator?.GetInfo()?.Connected ?? false);
+        public bool IsSlewing => (_currentTelescopeInfo?.Slewing ?? _telescopeMediator?.GetInfo()?.Slewing ?? false);
 
         public bool CanStart => IsMountConnected && !IsRunning && Interlocked.CompareExchange(ref TaskExecutingFlag, 0, 0) == 0;
+        public bool CanDropPin => IsRunning && !IsSlewing;
 
         public double ExposureTime {
             get => _settingsManager.ExposureTime;
@@ -347,6 +351,7 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
                 _isRunning = value;
                 RaisePropertyChanged(nameof(IsRunning));
                 RaisePropertyChanged(nameof(CanStart));
+                RaisePropertyChanged(nameof(CanDropPin));
             }
         }
 
@@ -451,6 +456,15 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
             }
         }
 
+        public double CameraRotationOffset {
+            get => _settingsManager.CameraRotationOffset;
+            set {
+                _settingsManager.CameraRotationOffset = value;
+                RaisePropertyChanged(nameof(CameraRotationOffset));
+                UpdateRotationAngle();
+            }
+        }
+
         public bool IsExactPositionEnabled {
             get => _settingsManager.IsExactPositionEnabled;
             set {
@@ -551,31 +565,76 @@ namespace NirZonshine.NINA.HorizonVisualMapper.ViewModels {
         }
 
         private void UpdateRotationAngle() {
-            if (!IsCounterRotationEnabled || !IsMountConnected) {
+            if (!IsMountConnected) {
                 WebcamImageRotationAngle = 0.0;
                 return;
             }
 
-            try {
-                double lat = _telescopeMediator.GetInfo()?.SiteLatitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Latitude ?? 0.0;
-                double alt = CurrentAlt;
-                double az = CurrentAz;
+            double totalRotation = CameraRotationOffset;
 
-                double latRad = lat * Math.PI / 180.0;
-                double altRad = alt * Math.PI / 180.0;
-                double azRad = az * Math.PI / 180.0;
+            if (IsCounterRotationEnabled) {
+                try {
+                    double lat = _telescopeMediator.GetInfo()?.SiteLatitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Latitude ?? 0.0;
+                    double altRad = CurrentAlt * Math.PI / 180.0;
+                    double azRad = CurrentAz * Math.PI / 180.0;
+                    double latRad = lat * Math.PI / 180.0;
 
-                double y = Math.Sin(azRad);
-                double x = Math.Cos(altRad) * Math.Tan(latRad) - Math.Sin(altRad) * Math.Cos(azRad);
+                    // Check if pointing near the celestial pole (Home/starting position).
+                    // In this position, HA and q are not well-defined, and we want to preserve the baseline 
+                    // mechanical CameraRotationOffset without any dynamic counter-rotation or flip.
+                    bool isNearPole = false;
+                    if (lat >= 0.0) {
+                        // Northern Hemisphere Pole: Alt = Lat, Az = 0 or 360
+                        if (Math.Abs(CurrentAlt - lat) < 3.0 && (CurrentAz < 5.0 || CurrentAz > 355.0)) {
+                            isNearPole = true;
+                        }
+                    } else {
+                        // Southern Hemisphere Pole: Alt = -Lat, Az = 180
+                        if (Math.Abs(CurrentAlt - Math.Abs(lat)) < 3.0 && Math.Abs(CurrentAz - 180.0) < 5.0) {
+                            isNearPole = true;
+                        }
+                    }
 
-                double qRad = Math.Atan2(y, x);
-                double qDeg = qRad * 180.0 / Math.PI;
+                    if (isNearPole) {
+                        // At the Home position (Celestial Pole), the camera is physically clamped horizontal,
+                        // so the rotation is exactly the baseline CameraRotationOffset (defaulting to 0).
+                        totalRotation = CameraRotationOffset;
+                    } else {
+                        // Hour Angle (HA) calculation
+                        // Used to determine whether the mount is pointing to the East or West of the meridian.
+                        // When pointing to the East (HA < 0), the GEM performs a meridian flip, rotating the telescope tube
+                        // and camera by 180 degrees relative to its West-pointing orientation.
+                        double yHA = -Math.Sin(azRad) * Math.Cos(altRad);
+                        double xHA = Math.Sin(altRad) * Math.Cos(latRad) - Math.Cos(altRad) * Math.Sin(latRad) * Math.Cos(azRad);
+                        double haDeg = Math.Atan2(yHA, xHA) * 180.0 / Math.PI;
 
-                WebcamImageRotationAngle = -qDeg;
-            } catch (Exception ex) {
-                Logger.Error($"[Horizon Visual Mapper] Counter-rotation calculation failed: {ex.Message}");
-                WebcamImageRotationAngle = 0.0;
+                        // Parallactic Angle (q) calculation
+                        // On a polar-aligned equatorial mount, the camera sensor stays aligned with the equatorial coordinate grid.
+                        // The field rotation angle of the local horizon relative to the camera sensor is exactly the Parallactic Angle (q).
+                        // There is no additional roll from Hour Angle (HA) double-counted; the parallactic angle already completely
+                        // defines the orientation of Zenith (the local vertical) relative to equatorial North.
+                        double yQ = Math.Sin(azRad);
+                        double xQ = Math.Cos(altRad) * Math.Tan(latRad) - Math.Sin(altRad) * Math.Cos(azRad);
+                        double qDeg = Math.Atan2(yQ, xQ) * 180.0 / Math.PI;
+
+                        // Apply the counter-rotation to level the horizon.
+                        // We subtract 90 degrees here to compensate for the 90-degree Declination pitch shift between the pole
+                        // (Home position) and the horizon points. This ensures a baseline offset of 0 degrees remains perfectly 
+                        // horizontal throughout the entire run.
+                        totalRotation -= (qDeg + 90.0);
+
+                        // If pointing East (HA < -0.1), apply a 180-degree flip to account for the GEM meridian flip.
+                        // A small dead-zone of 0.1 degrees around the meridian prevents crossing-jitter at the home position.
+                        if (haDeg < -0.1) {
+                            totalRotation += 180.0;
+                        }
+                    }
+                } catch (Exception ex) {
+                    Logger.Error($"[Horizon Visual Mapper] Rotation calculation failed: {ex.Message}");
+                }
             }
+
+            WebcamImageRotationAngle = totalRotation;
         }
 
         internal void SetStatus(string text, Brush color) {

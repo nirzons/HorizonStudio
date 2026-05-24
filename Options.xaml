@@ -504,7 +504,7 @@
                                 <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Stop Mapping" Command="{Binding StopMappingCommand}" Height="34" IsEnabled="{Binding IsRunning}" Background="#EF4444" Margin="4,0,0,6" />
 
                                 <!-- Placed Node interactions -->
-                                <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource ActionBtnStyle}" Content="Drop Horizon Pin [Spacebar]" Command="{Binding DropPinCommand}" Height="36" IsEnabled="{Binding IsRunning}" Background="#3B82F6" Margin="0,0,0,6" />
+                                <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource ActionBtnStyle}" Content="Drop Horizon Pin [Spacebar]" Command="{Binding DropPinCommand}" Height="36" IsEnabled="{Binding CanDropPin}" Background="#3B82F6" Margin="0,0,0,6" />
                                 
                                 <Button Grid.Row="2" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Undo Last Pin" Command="{Binding UndoPinCommand}" Height="28" IsEnabled="{Binding IsRunning}" Background="#6B7280" Margin="0,0,4,6" FontSize="11" />
                                 <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Clear All Pins" Command="{Binding ClearPinsCommand}" Height="28" IsEnabled="{Binding IsRunning}" Background="#E11D48" Margin="4,0,0,6" FontSize="11" />
@@ -601,10 +601,14 @@
                                     <TextBox Text="{Binding StepSizeAz, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
                                 </StackPanel>
 
-                                <!-- Counter-rotation checkbox toggle -->
-                                <StackPanel Grid.Row="0" Grid.Column="2" Margin="4,0,0,6" ToolTip="Counter-rotates the webcam view as the mount tracks/slews.">
-                                    <TextBlock Text="🔄 Counter-Rotate" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
-                                    <CheckBox IsChecked="{Binding IsCounterRotationEnabled, UpdateSourceTrigger=PropertyChanged}" Content="Enabled" Foreground="DarkGray" FontSize="10.5" Cursor="Hand" Height="24" VerticalContentAlignment="Center" VerticalAlignment="Center" />
+                                <!-- Camera Rotation & Offset -->
+                                <StackPanel Grid.Row="0" Grid.Column="2" Margin="4,0,0,6" ToolTip="Counter-rotates the webcam view for EQ mounts. Use offset to level the horizon.">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                        <TextBlock Text="🔄 EQ Auto-Rotate" FontSize="9" Foreground="DarkGray" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                        <CheckBox IsChecked="{Binding IsCounterRotationEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <Slider Value="{Binding CameraRotationOffset, UpdateSourceTrigger=PropertyChanged}" Minimum="-180" Maximum="180" TickFrequency="1" IsSnapToTickEnabled="True" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding CameraRotationOffset, StringFormat=Offset: {0}°}" FontSize="9" Foreground="DarkGray" HorizontalAlignment="Center" />
                                 </StackPanel>
 
                                 <!-- Safety exclusions checklist -->
