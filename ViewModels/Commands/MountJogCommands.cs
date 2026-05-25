@@ -91,6 +91,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 return;
             }
             
+            _vm.IsActionSlewing = true;
+
             Task.Run(async () => {
                 try {
                     _vm.Log("Locating mount home position...");
@@ -98,6 +100,10 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     _vm.Log("Mount home sequence initiated.");
                 } catch (Exception ex) {
                     _vm.Log($"[Error] FindHome failed: {ex.Message}");
+                } finally {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                        _vm.IsActionSlewing = false;
+                    });
                 }
             });
         }
@@ -133,6 +139,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     $"Safety Lockout: {violation}\nDisable 'Solar Safety Zone' to bypass.");
                 return;
             }
+
+            _vm.IsActionSlewing = true;
 
             Task.Run(async () => {
                 try {
@@ -195,6 +203,10 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     _telescopeMediator.SetTrackingEnabled(false);
                 } catch (Exception ex) {
                     _vm.Log($"[Error] Slew Jog failed: {ex.Message}");
+                } finally {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                        _vm.IsActionSlewing = false;
+                    });
                 }
             });
         }

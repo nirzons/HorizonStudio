@@ -281,7 +281,10 @@
                                         <TextBlock Text="225°" FontSize="8.5" Foreground="Gray" Canvas.Left="45" Canvas.Top="238" />
                                         <TextBlock Text="315°" FontSize="8.5" Foreground="Gray" Canvas.Left="45" Canvas.Top="50" />
 
-                                        <!-- 1. Horizon Obstacle Trace Polyline -->
+                                        <!-- 1a. Horizon Obstacle Shaded Zone -->
+                                        <Polygon Points="{Binding RadarObstructionPoints}" Fill="#1E00F3FF" IsHitTestVisible="False" />
+
+                                        <!-- 1b. Horizon Obstacle Trace Line -->
                                         <Polyline Points="{Binding RadarHorizonPoints}" Stroke="#FF00F3FF" StrokeThickness="2.5" StrokeLineJoin="Round" Opacity="0.85" />
 
                                         <!-- 2. Interactive Dropped Pins Nodes -->
@@ -330,6 +333,30 @@
                                                 <Line X1="12" Y1="0" X2="12" Y2="24" Stroke="#EF4444" StrokeThickness="1.0" />
                                             </Grid>
                                         </Canvas>
+
+                                        <!-- 4. Active/Selected Node Indicator -->
+                                        <Canvas IsHitTestVisible="False">
+                                            <Canvas.Style>
+                                                <Style TargetType="Canvas">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasActiveNode}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Canvas.Style>
+                                            <Grid Width="20" Height="20" Margin="-10,-10,0,0">
+                                                <Canvas.Left>
+                                                    <Binding Path="ActiveNodeRadarX" />
+                                                </Canvas.Left>
+                                                <Canvas.Top>
+                                                    <Binding Path="ActiveNodeRadarY" />
+                                                </Canvas.Top>
+                                                <Ellipse Width="16" Height="16" Stroke="#FF00F3FF" StrokeThickness="2.0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Ellipse Width="4" Height="4" Fill="#FF00F3FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Canvas>
                                     </Canvas>
                                 </Grid>
                             </ScrollViewer>
@@ -338,16 +365,20 @@
                             <Border CornerRadius="4" Background="#1A1A22" BorderThickness="1" BorderBrush="#2D2D38" Padding="8,6" Margin="10" VerticalAlignment="Bottom" HorizontalAlignment="Left" Opacity="0.8">
                                 <StackPanel Orientation="Vertical">
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <Line X1="0" Y1="5" X2="12" Y2="5" Stroke="#FF00F3FF" StrokeThickness="2.5" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                        <TextBlock Text="Horizon Obstruction Line" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
+                                        <Border Width="12" Height="8" CornerRadius="1" BorderBrush="#FF00F3FF" BorderThickness="1.5" Background="#1E00F3FF" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBlock Text="Horizon Obstruction Zone" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                         <Ellipse Width="6" Height="6" Fill="#FFF59E0B" VerticalAlignment="Center" Margin="3,0,9,0" />
                                         <TextBlock Text="Horizon Nodes (Pins)" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                         <Ellipse Width="6" Height="6" Stroke="#EF4444" StrokeThickness="1.5" VerticalAlignment="Center" Margin="3,0,9,0" />
                                         <TextBlock Text="Telescope Pointer (Active)" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="6" Height="6" Stroke="#FF00F3FF" StrokeThickness="1.5" VerticalAlignment="Center" Margin="3,0,9,0" />
+                                        <TextBlock Text="Active Verification Node" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -363,9 +394,10 @@
                                 <RowDefinition Height="Auto" /> <!-- UVC Webcam Configuration (Row 0) -->
                                 <RowDefinition Height="Auto" /> <!-- Webcam Co-Alignment Assistant (Row 1) -->
                                 <RowDefinition Height="Auto" /> <!-- Main Active Mapping Controls (Row 2) -->
-                                <RowDefinition Height="Auto" /> <!-- Virtual Alt-Az Jogging Panel (Row 3) -->
-                                <RowDefinition Height="Auto" /> <!-- Hardware Parameters & Safety Checklist (Row 4) -->
-                                <RowDefinition Height="*" MinHeight="100" /> <!-- Console logs (Row 5) -->
+                                <RowDefinition Height="Auto" /> <!-- Point Verification Panel (Row 3) -->
+                                <RowDefinition Height="Auto" /> <!-- Virtual Alt-Az Jogging Panel (Row 4) -->
+                                <RowDefinition Height="Auto" /> <!-- Hardware Parameters & Safety Checklist (Row 5) -->
+                                <RowDefinition Height="*" MinHeight="100" /> <!-- Console logs (Row 6) -->
                             </Grid.RowDefinitions>
                             <Grid.Resources>
                                 <Style x:Key="ActionBtnStyle" TargetType="Button">
@@ -513,8 +545,69 @@
                                 <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource ActionBtnStyle}" Content="Save Horizon Profile" Command="{Binding SaveHorizonCommand}" Height="34" Background="#F59E0B" Margin="0,0,0,0" ToolTip="Save the collected pins to a N.I.N.A. .hrzn file" />
                             </Grid>
 
-                            <!-- Row 3: Virtual Alt-Az Jogging Panel (5x5 Grid) -->
-                            <StackPanel Grid.Row="3" Orientation="Vertical" Margin="0,0,0,12">
+                            <!-- Row 3: Point Verification Panel -->
+                            <Border Grid.Row="3" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="Point Verification (Slew Back)" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                                    
+                                    <Border CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,0,0,8">
+                                        <TextBlock Text="Select a node and slew the mount back to physically verify your mapped points." FontSize="9.5" Foreground="DarkGray" TextWrapping="Wrap" />
+                                    </Border>
+                                    
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="◀ Slew CCW" Command="{Binding SlewCCWCommand}" IsEnabled="{Binding CanVerifyPoints}" Height="28" Background="#4F46E5" Margin="0,0,4,8" FontSize="11" ToolTip="Slew Counter-Clockwise (Decreasing Azimuth)" />
+                                        <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Slew CW ▶" Command="{Binding SlewCWCommand}" IsEnabled="{Binding CanVerifyPoints}" Height="28" Background="#4F46E5" Margin="4,0,0,8" FontSize="11" ToolTip="Slew Clockwise (Increasing Azimuth)" />
+
+                                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock Text="Verification Step Size:  " FontSize="11" Foreground="Gray" VerticalAlignment="Center" />
+                                            <ComboBox ItemsSource="{Binding VerificationStepSizes}" SelectedItem="{Binding VerificationStepSize}" Width="70" Height="26" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Border CornerRadius="4" Background="#161b22" BorderThickness="1" BorderBrush="#2D2D35" Padding="8,6" Margin="0,8,0,0">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasActiveNode}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Orientation="Vertical">
+                                                <TextBlock FontSize="10" Foreground="Gray" Text="ACTIVE VERIFICATION NODE" FontWeight="SemiBold" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <TextBlock Text="Index: " FontSize="11" Foreground="DarkGray" />
+                                                    <TextBlock Text="{Binding ActiveNodeIndex}" FontSize="11" FontWeight="Bold" Foreground="#FF00F3FF" />
+                                                    <TextBlock Text="  |  Az: " FontSize="11" Foreground="DarkGray" />
+                                                    <TextBlock Text="{Binding ActiveNode.Azimuth, StringFormat={}{0:F2}°}" FontSize="11" FontWeight="Bold" Foreground="#FF00F3FF" />
+                                                    <TextBlock Text="  Alt: " FontSize="11" Foreground="DarkGray" />
+                                                    <TextBlock Text="{Binding ActiveNode.Altitude, StringFormat={}{0:F2}°}" FontSize="11" FontWeight="Bold" Foreground="#FF00F3FF" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0" />
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Row 4: Virtual Alt-Az Jogging Panel (5x5 Grid) -->
+                            <StackPanel Grid.Row="4" Orientation="Vertical" Margin="0,0,0,12">
                                 <TextBlock Text="Virtual Alt-Az Jogging" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,6" />
                                 
                                 <Grid Width="180" Height="150" HorizontalAlignment="Center">
@@ -534,39 +627,39 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Row 0: Double-Arrow Diagonals & North -->
-                                    <Button Grid.Row="0" Grid.Column="0" Content="↖↖" Command="{Binding DoubleJogNorthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az-" FontSize="9" />
-                                    <Button Grid.Row="0" Grid.Column="1" Content="▲▲◀" Command="{Binding JogN2W1Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Up, Single Az Left" FontSize="9" />
-                                    <Button Grid.Row="0" Grid.Column="2" Content="▲▲" Command="{Binding DoubleJogNorthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt+" FontSize="9" />
-                                    <Button Grid.Row="0" Grid.Column="3" Content="▲▲▶" Command="{Binding JogN2E1Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Up, Single Az Right" FontSize="9" />
-                                    <Button Grid.Row="0" Grid.Column="4" Content="↗↗" Command="{Binding DoubleJogNorthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az+" FontSize="9" />
+                                    <Button Grid.Row="0" Grid.Column="0" Content="↖↖" Command="{Binding DoubleJogNorthWestCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az-" FontSize="9" />
+                                    <Button Grid.Row="0" Grid.Column="1" Content="▲▲◀" Command="{Binding JogN2W1Command}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Up, Single Az Left" FontSize="9" />
+                                    <Button Grid.Row="0" Grid.Column="2" Content="▲▲" Command="{Binding DoubleJogNorthCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt+" FontSize="9" />
+                                    <Button Grid.Row="0" Grid.Column="3" Content="▲▲▶" Command="{Binding JogN2E1Command}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Up, Single Az Right" FontSize="9" />
+                                    <Button Grid.Row="0" Grid.Column="4" Content="↗↗" Command="{Binding DoubleJogNorthEastCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az+" FontSize="9" />
 
                                     <!-- Row 1: Single-Arrow Diagonals & North -->
-                                    <Button Grid.Row="1" Grid.Column="0" Content="▲◀◀" Command="{Binding JogN1W2Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Up, Double Az Left" FontSize="9" />
-                                    <Button Grid.Row="1" Grid.Column="1" Content="↖" Command="{Binding JogNorthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az-" />
-                                    <Button Grid.Row="1" Grid.Column="2" Content="▲" Command="{Binding JogNorthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt+" />
-                                    <Button Grid.Row="1" Grid.Column="3" Content="↗" Command="{Binding JogNorthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az+" />
-                                    <Button Grid.Row="1" Grid.Column="4" Content="▲▶▶" Command="{Binding JogN1E2Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Up, Double Az Right" FontSize="9" />
+                                    <Button Grid.Row="1" Grid.Column="0" Content="▲◀◀" Command="{Binding JogN1W2Command}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Up, Double Az Left" FontSize="9" />
+                                    <Button Grid.Row="1" Grid.Column="1" Content="↖" Command="{Binding JogNorthWestCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az-" />
+                                    <Button Grid.Row="1" Grid.Column="2" Content="▲" Command="{Binding JogNorthCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt+" />
+                                    <Button Grid.Row="1" Grid.Column="3" Content="↗" Command="{Binding JogNorthEastCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az+" />
+                                    <Button Grid.Row="1" Grid.Column="4" Content="▲▶▶" Command="{Binding JogN1E2Command}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Up, Double Az Right" FontSize="9" />
 
                                     <!-- Row 2: Double/Single West, Home, Single/Double East -->
-                                    <Button Grid.Row="2" Grid.Column="0" Content="◀◀" Command="{Binding DoubleJogWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az-" FontSize="9" />
-                                    <Button Grid.Row="2" Grid.Column="1" Content="◀" Command="{Binding JogWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az-" />
-                                    <Button Grid.Row="2" Grid.Column="2" Content="⌂" Command="{Binding HomeMountCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2563EB" ToolTip="Home Mount" FontSize="14" />
-                                    <Button Grid.Row="2" Grid.Column="3" Content="▶" Command="{Binding JogEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az+" />
-                                    <Button Grid.Row="2" Grid.Column="4" Content="▶▶" Command="{Binding DoubleJogEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az+" FontSize="9" />
+                                    <Button Grid.Row="2" Grid.Column="0" Content="◀◀" Command="{Binding DoubleJogWestCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az-" FontSize="9" />
+                                    <Button Grid.Row="2" Grid.Column="1" Content="◀" Command="{Binding JogWestCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az-" />
+                                    <Button Grid.Row="2" Grid.Column="2" Content="⌂" Command="{Binding HomeMountCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2563EB" ToolTip="Home Mount" FontSize="14" />
+                                    <Button Grid.Row="2" Grid.Column="3" Content="▶" Command="{Binding JogEastCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az+" />
+                                    <Button Grid.Row="2" Grid.Column="4" Content="▶▶" Command="{Binding DoubleJogEastCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az+" FontSize="9" />
 
                                     <!-- Row 3: Single-Arrow Diagonals & South -->
-                                    <Button Grid.Row="3" Grid.Column="0" Content="▼◀◀" Command="{Binding JogS1W2Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Down, Double Az Left" FontSize="9" />
-                                    <Button Grid.Row="3" Grid.Column="1" Content="↙" Command="{Binding JogSouthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az-" />
-                                    <Button Grid.Row="3" Grid.Column="2" Content="▼" Command="{Binding JogSouthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt-" />
-                                    <Button Grid.Row="3" Grid.Column="3" Content="↘" Command="{Binding JogSouthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az+" />
-                                    <Button Grid.Row="3" Grid.Column="4" Content="▼▶▶" Command="{Binding JogS1E2Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Down, Double Az Right" FontSize="9" />
+                                    <Button Grid.Row="3" Grid.Column="0" Content="▼◀◀" Command="{Binding JogS1W2Command}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Down, Double Az Left" FontSize="9" />
+                                    <Button Grid.Row="3" Grid.Column="1" Content="↙" Command="{Binding JogSouthWestCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az-" />
+                                    <Button Grid.Row="3" Grid.Column="2" Content="▼" Command="{Binding JogSouthCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt-" />
+                                    <Button Grid.Row="3" Grid.Column="3" Content="↘" Command="{Binding JogSouthEastCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az+" />
+                                    <Button Grid.Row="3" Grid.Column="4" Content="▼▶▶" Command="{Binding JogS1E2Command}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Down, Double Az Right" FontSize="9" />
 
                                     <!-- Row 4: Double-Arrow Diagonals & South -->
-                                    <Button Grid.Row="4" Grid.Column="0" Content="↙↙" Command="{Binding DoubleJogSouthWestCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az-" FontSize="9" />
-                                    <Button Grid.Row="4" Grid.Column="1" Content="▼▼◀" Command="{Binding JogS2W1Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Down, Single Az Left" FontSize="9" />
-                                    <Button Grid.Row="4" Grid.Column="2" Content="▼▼" Command="{Binding DoubleJogSouthCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt-" FontSize="9" />
-                                    <Button Grid.Row="4" Grid.Column="3" Content="▼▼▶" Command="{Binding JogS2E1Command}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Down, Single Az Right" FontSize="9" />
-                                    <Button Grid.Row="4" Grid.Column="4" Content="↘↘" Command="{Binding DoubleJogSouthEastCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az+" FontSize="9" />
+                                    <Button Grid.Row="4" Grid.Column="0" Content="↙↙" Command="{Binding DoubleJogSouthWestCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az-" FontSize="9" />
+                                    <Button Grid.Row="4" Grid.Column="1" Content="▼▼◀" Command="{Binding JogS2W1Command}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Down, Single Az Left" FontSize="9" />
+                                    <Button Grid.Row="4" Grid.Column="2" Content="▼▼" Command="{Binding DoubleJogSouthCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt-" FontSize="9" />
+                                    <Button Grid.Row="4" Grid.Column="3" Content="▼▼▶" Command="{Binding JogS2E1Command}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Down, Single Az Right" FontSize="9" />
+                                    <Button Grid.Row="4" Grid.Column="4" Content="↘↘" Command="{Binding DoubleJogSouthEastCommand}" IsEnabled="{Binding CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az+" FontSize="9" />
                                 </Grid>
 
                                 <!-- Emergency Stop Button -->
@@ -578,8 +671,8 @@
                                 </Button>
                             </StackPanel>
 
-                            <!-- Row 4: Hardware Parameters & Safety Checklist -->
-                            <Grid Grid.Row="4" Margin="0,0,0,8">
+                            <!-- Row 5: Hardware Parameters & Safety Checklist -->
+                            <Grid Grid.Row="5" Margin="0,0,0,8">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -640,8 +733,8 @@
                                 </StackPanel>
                             </Grid>
 
-                            <!-- Row 5: Log console feeds -->
-                            <Border Grid.Row="5" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,4,0,4">
+                            <!-- Row 6: Log console feeds -->
+                            <Border Grid.Row="6" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,4,0,4">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <StackPanel>
                                         <TextBlock Text="System Activity Logs" FontSize="9" FontWeight="Bold" Foreground="Gray" Margin="0,0,0,4" />

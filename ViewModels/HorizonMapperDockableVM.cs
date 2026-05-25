@@ -127,9 +127,11 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
             HorizonNodes.CollectionChanged += (s, e) => {
                 RaisePropertyChanged(nameof(RadarHorizonPoints));
+                RaisePropertyChanged(nameof(RadarObstructionPoints));
+                RaisePropertyChanged(nameof(CanVerifyPoints));
             };
 
-            _mappingCommands = new MappingCommands(this, _telescopeMediator);
+            _mappingCommands = new MappingCommands(this, _telescopeMediator, _profileService);
             _mountJogCommands = new MountJogCommands(this, _telescopeMediator, _safetyManager, _profileService);
 
             _webcamService = new WebcamService();
@@ -189,6 +191,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 _lastIsMountConnected = currentMount;
                 RaisePropertyChanged(nameof(IsMountConnected));
                 RaisePropertyChanged(nameof(CanStart));
+                RaisePropertyChanged(nameof(CanVerifyPoints));
+                RaisePropertyChanged(nameof(CanJog));
             }
 
             if (IsMountConnected && _currentTelescopeInfo != null) {
@@ -213,6 +217,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 RaisePropertyChanged(nameof(CanStart));
                 RaisePropertyChanged(nameof(IsSlewing));
                 RaisePropertyChanged(nameof(CanDropPin));
+                RaisePropertyChanged(nameof(CanVerifyPoints));
+                RaisePropertyChanged(nameof(CanJog));
                 if (IsMountConnected && deviceInfo != null) {
                     CurrentAlt = deviceInfo.Altitude;
                     CurrentAz = deviceInfo.Azimuth;
@@ -227,8 +233,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public bool IsMountConnected => (_currentTelescopeInfo?.Connected ?? _telescopeMediator?.GetInfo()?.Connected ?? false);
         public bool IsSlewing => (_currentTelescopeInfo?.Slewing ?? _telescopeMediator?.GetInfo()?.Slewing ?? false);
 
-        public bool CanStart => IsMountConnected && !IsRunning && Interlocked.CompareExchange(ref TaskExecutingFlag, 0, 0) == 0;
-        public bool CanDropPin => IsRunning && !IsSlewing;
+        public bool CanStart => IsMountConnected && !IsRunning && Interlocked.CompareExchange(ref TaskExecutingFlag, 0, 0) == 0 && !IsActionSlewing;
+        public bool CanDropPin => IsRunning && !IsSlewing && !IsActionSlewing;
 
         public double ExposureTime {
             get => _settingsManager.ExposureTime;
@@ -476,6 +482,64 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public double? LastRequestedAlt { get; set; }
         public double? LastRequestedAz { get; set; }
 
+        private int _activeNodeIndex = -1;
+        public int ActiveNodeIndex {
+            get => _activeNodeIndex;
+            set {
+                if (_activeNodeIndex != value) {
+                    _activeNodeIndex = value;
+                    RaisePropertyChanged(nameof(ActiveNodeIndex));
+                    RaisePropertyChanged(nameof(ActiveNode));
+                    RaisePropertyChanged(nameof(ActiveNodeRadarX));
+                    RaisePropertyChanged(nameof(ActiveNodeRadarY));
+                    RaisePropertyChanged(nameof(HasActiveNode));
+                }
+            }
+        }
+
+        public HorizonNode ActiveNode {
+            get {
+                if (ActiveNodeIndex >= 0 && ActiveNodeIndex < HorizonNodes.Count) {
+                    return HorizonNodes[ActiveNodeIndex];
+                }
+                return null;
+            }
+        }
+
+        public bool HasActiveNode => ActiveNode != null;
+
+        public double ActiveNodeRadarX => ActiveNode?.RadarX ?? 150.0;
+        public double ActiveNodeRadarY => ActiveNode?.RadarY ?? 150.0;
+
+        private bool _isActionSlewing = false;
+        public bool IsActionSlewing {
+            get => _isActionSlewing;
+            set {
+                if (_isActionSlewing != value) {
+                    _isActionSlewing = value;
+                    RaisePropertyChanged(nameof(IsActionSlewing));
+                    RaisePropertyChanged(nameof(CanVerifyPoints));
+                    RaisePropertyChanged(nameof(CanDropPin));
+                    RaisePropertyChanged(nameof(CanStart));
+                    RaisePropertyChanged(nameof(CanJog));
+                }
+            }
+        }
+
+        public int VerificationStepSize {
+            get => _settingsManager.VerificationStepSize;
+            set {
+                _settingsManager.VerificationStepSize = value;
+                RaisePropertyChanged(nameof(VerificationStepSize));
+            }
+        }
+
+        public List<int> VerificationStepSizes { get; } = new List<int> { 1, 2, 5, 10, 20, 50 };
+
+        public bool CanVerifyPoints => IsMountConnected && !IsSlewing && !IsActionSlewing && HorizonNodes.Count > 0;
+
+        public bool CanJog => IsMountConnected && !IsSlewing && !IsActionSlewing;
+
         public double WebcamImageRotationAngle {
             get => _webcamImageRotationAngle;
             set {
@@ -502,16 +566,98 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             }
         }
 
+        public double GetInterpolatedAltitude(double azimuth) {
+            var nodes = HorizonNodes;
+            if (nodes.Count == 0) return 0.0;
+            if (nodes.Count == 1) return nodes[0].Altitude;
+
+            // Sort nodes by azimuth
+            var sorted = new List<HorizonNode>(nodes);
+            sorted.Sort((a, b) => a.Azimuth.CompareTo(b.Azimuth));
+
+            // Keep azimuth in [0, 360)
+            azimuth = (azimuth % 360.0 + 360.0) % 360.0;
+
+            // Find the enclosing interval
+            for (int i = 0; i < sorted.Count - 1; i++) {
+                if (azimuth >= sorted[i].Azimuth && azimuth <= sorted[i + 1].Azimuth) {
+                    double range = sorted[i + 1].Azimuth - sorted[i].Azimuth;
+                    if (range == 0.0) return sorted[i].Altitude;
+                    double t = (azimuth - sorted[i].Azimuth) / range;
+                    return sorted[i].Altitude + t * (sorted[i + 1].Altitude - sorted[i].Altitude);
+                }
+            }
+
+            // If we are here, azimuth is in the wrap-around gap between the last and first node
+            double lastAz = sorted[sorted.Count - 1].Azimuth;
+            double firstAz = sorted[0].Azimuth;
+            double lastAlt = sorted[sorted.Count - 1].Altitude;
+            double firstAlt = sorted[0].Altitude;
+
+            double gapSize = (firstAz - lastAz + 360.0) % 360.0;
+            if (gapSize == 0.0) return lastAlt;
+
+            double diff = (azimuth - lastAz + 360.0) % 360.0;
+            double tGap = diff / gapSize;
+            return lastAlt + tGap * (firstAlt - lastAlt);
+        }
+
         public System.Windows.Media.PointCollection RadarHorizonPoints {
             get {
                 var points = new System.Windows.Media.PointCollection();
-                // Sort nodes by azimuth to draw the winding horizon line correctly
+                if (HorizonNodes.Count == 0) return points;
+
                 var sortedNodes = new List<HorizonNode>(HorizonNodes);
                 sortedNodes.Sort((a, b) => a.Azimuth.CompareTo(b.Azimuth));
 
-                foreach (var node in sortedNodes) {
-                    points.Add(new System.Windows.Point(node.RadarX, node.RadarY));
+                if (sortedNodes.Count == 1) {
+                    points.Add(new System.Windows.Point(sortedNodes[0].RadarX, sortedNodes[0].RadarY));
+                    return points;
                 }
+
+                // Trace the horizon line clockwise in 1-degree steps all the way around 360 degrees
+                // This ensures a perfectly smooth polar circle/spiral arc that matches N.I.N.A.'s interpolation!
+                for (double az = 0.0; az < 360.0; az += 1.0) {
+                    double alt = GetInterpolatedAltitude(az);
+                    double r = 120.0 * (90.0 - alt) / 90.0;
+                    double rad = az * Math.PI / 180.0;
+                    double x = 150.0 + r * Math.Sin(rad);
+                    double y = 150.0 - r * Math.Cos(rad);
+                    points.Add(new System.Windows.Point(x, y));
+                }
+
+                // Add the start point at 360° (0°) to close the loop
+                double startAlt = GetInterpolatedAltitude(0.0);
+                double startR = 120.0 * (90.0 - startAlt) / 90.0;
+                points.Add(new System.Windows.Point(150.0, 150.0 - startR));
+
+                return points;
+            }
+        }
+
+        public System.Windows.Media.PointCollection RadarObstructionPoints {
+            get {
+                var points = new System.Windows.Media.PointCollection();
+                if (HorizonNodes.Count == 0) return points;
+
+                // 1. Trace the outer circle clockwise (Altitude = 0)
+                for (double az = 0.0; az <= 360.0; az += 2.0) {
+                    double rad = az * Math.PI / 180.0;
+                    double x = 150.0 + 120.0 * Math.Sin(rad);
+                    double y = 150.0 - 120.0 * Math.Cos(rad);
+                    points.Add(new System.Windows.Point(x, y));
+                }
+
+                // 2. Trace the horizon line counter-clockwise (decreasing azimuth) back to the start
+                for (double az = 360.0; az >= 0.0; az -= 2.0) {
+                    double alt = GetInterpolatedAltitude(az);
+                    double r = 120.0 * (90.0 - alt) / 90.0;
+                    double rad = az * Math.PI / 180.0;
+                    double x = 150.0 + r * Math.Sin(rad);
+                    double y = 150.0 - r * Math.Cos(rad);
+                    points.Add(new System.Windows.Point(x, y));
+                }
+
                 return points;
             }
         }
@@ -666,6 +812,9 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public ICommand UndoPinCommand => _mappingCommands.UndoPinCommand;
         public ICommand ClearPinsCommand => _mappingCommands.ClearPinsCommand;
         public ICommand SaveHorizonCommand => _mappingCommands.SaveHorizonCommand;
+
+        public ICommand SlewCCWCommand => _mappingCommands.SlewCCWCommand;
+        public ICommand SlewCWCommand => _mappingCommands.SlewCWCommand;
 
         public ICommand JogNorthCommand => _mountJogCommands.JogNorthCommand;
         public ICommand JogSouthCommand => _mountJogCommands.JogSouthCommand;

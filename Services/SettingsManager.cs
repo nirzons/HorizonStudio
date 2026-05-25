@@ -37,6 +37,7 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
         private bool _isCounterRotationEnabled = false;
         private double _cameraRotationOffset = 0.0;
         private bool _isExactPositionEnabled = false;
+        private int _verificationStepSize = 1;
 
         public SettingsManager(IProfileService profileService) {
             _profileService = profileService;
@@ -162,6 +163,11 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
             set { if (_isExactPositionEnabled != value) { _isExactPositionEnabled = value; SaveSetting(nameof(IsExactPositionEnabled), value); OnPropertyChanged(); } }
         }
 
+        public int VerificationStepSize {
+            get => _verificationStepSize;
+            set { if (_verificationStepSize != value) { _verificationStepSize = value; SaveSetting(nameof(VerificationStepSize), value); OnPropertyChanged(); } }
+        }
+
         private void LoadSettings() {
             try {
                 if (_accessor == null) return;
@@ -185,6 +191,7 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
                 _isCounterRotationEnabled = _accessor.GetValueBoolean(nameof(IsCounterRotationEnabled), false);
                 _cameraRotationOffset = _accessor.GetValueDouble(nameof(CameraRotationOffset), 0.0);
                 _isExactPositionEnabled = _accessor.GetValueBoolean(nameof(IsExactPositionEnabled), false);
+                _verificationStepSize = _accessor.GetValueInt32(nameof(VerificationStepSize), 1);
 
                 OnPropertyChanged(string.Empty);
             } catch (Exception ex) {

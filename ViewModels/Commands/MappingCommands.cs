@@ -6,12 +6,14 @@ using System.Threading;
 using System.Windows.Input;
 using Microsoft.Win32;
 using NINA.Equipment.Interfaces.Mediator;
+using NINA.Profile.Interfaces;
 using NirZonshine.NINA.HorizonStudio.Domain;
 
 namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
     public class MappingCommands {
         private readonly HorizonMapperDockableVM _vm;
         private readonly ITelescopeMediator _telescopeMediator;
+        private readonly IProfileService _profileService;
         private readonly Stack<HorizonNode> _pinHistory = new Stack<HorizonNode>();
 
         public ICommand StartMappingCommand { get; }
@@ -21,9 +23,13 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
         public ICommand ClearPinsCommand { get; }
         public ICommand SaveHorizonCommand { get; }
 
-        public MappingCommands(HorizonMapperDockableVM vm, ITelescopeMediator telescopeMediator) {
+        public ICommand SlewCCWCommand { get; }
+        public ICommand SlewCWCommand { get; }
+
+        public MappingCommands(HorizonMapperDockableVM vm, ITelescopeMediator telescopeMediator, IProfileService profileService) {
             _vm = vm;
             _telescopeMediator = telescopeMediator;
+            _profileService = profileService;
 
             StartMappingCommand = new RelayCommand(o => StartMapping());
             StopMappingCommand = new RelayCommand(o => StopMapping());
@@ -31,6 +37,9 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             UndoPinCommand = new RelayCommand(o => UndoPin());
             ClearPinsCommand = new RelayCommand(o => ClearPins());
             SaveHorizonCommand = new RelayCommand(o => SaveHorizon());
+
+            SlewCCWCommand = new RelayCommand(o => SlewCCW());
+            SlewCWCommand = new RelayCommand(o => SlewCW());
         }
 
         public void SaveHorizon() {
@@ -195,6 +204,12 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             _vm.HorizonNodes.Remove(removed);
             _vm.NodeCount = _vm.HorizonNodes.Count;
 
+            if (removed == _vm.ActiveNode) {
+                _vm.ActiveNodeIndex = -1;
+            } else if (_vm.ActiveNodeIndex >= _vm.HorizonNodes.Count) {
+                _vm.ActiveNodeIndex = _vm.HorizonNodes.Count - 1;
+            }
+
             if (_pinHistory.Count > 0) {
                 var top = _pinHistory.Peek();
                 _vm.LastNodeAlt = top.Altitude;
@@ -214,12 +229,214 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             _vm.HorizonNodes.Clear();
             _pinHistory.Clear();
+            _vm.ActiveNodeIndex = -1;
             _vm.NodeCount = 0;
             _vm.LastNodeAlt = 0.0;
             _vm.LastNodeAz = 0.0;
             _vm.LastNodeText = "None";
 
             _vm.Log("[Clear Pins] Removed all horizon nodes from active session.");
+        }
+
+        private int GetClosestNodeIndex(double currentAz) {
+            int count = _vm.HorizonNodes.Count;
+            if (count == 0) return -1;
+
+            int closestIndex = 0;
+            double minDiff = 360.0;
+
+            for (int i = 0; i < count; i++) {
+                double diff = Math.Abs(currentAz - _vm.HorizonNodes[i].Azimuth) % 360.0;
+                double shortest = diff > 180.0 ? 360.0 - diff : diff;
+                if (shortest < minDiff) {
+                    minDiff = shortest;
+                    closestIndex = i;
+                }
+            }
+            return closestIndex;
+        }
+
+        public void SlewCCW() {
+            int count = _vm.HorizonNodes.Count;
+            if (count == 0) return;
+
+            double currentAz = _vm.CurrentAz;
+            int currentIndex = _vm.ActiveNodeIndex;
+            int ccwIndex;
+            if (currentIndex == -1) {
+                int closestIndex = GetClosestNodeIndex(currentAz);
+                if (closestIndex != -1) {
+                    double diff = Math.Abs(currentAz - _vm.HorizonNodes[closestIndex].Azimuth) % 360.0;
+                    double dist = diff > 180.0 ? 360.0 - diff : diff;
+                    if (dist < 1.0) {
+                        ccwIndex = (closestIndex - _vm.VerificationStepSize) % count;
+                        if (ccwIndex < 0) ccwIndex += count;
+                    } else {
+                        ccwIndex = closestIndex;
+                    }
+                } else {
+                    ccwIndex = count - 1;
+                }
+            } else {
+                ccwIndex = (currentIndex - _vm.VerificationStepSize) % count;
+                if (ccwIndex < 0) ccwIndex += count;
+            }
+
+            var targetNode = _vm.HorizonNodes[ccwIndex];
+            double targetAz = targetNode.Azimuth;
+            double diffSlew = Math.Abs(currentAz - targetAz) % 360.0;
+            double deltaAz = diffSlew > 180.0 ? 360.0 - diffSlew : diffSlew;
+
+            if (deltaAz > 45.0) {
+                var result = System.Windows.MessageBox.Show(
+                    $"Warning: Slew CCW requires a large azimuth movement of {deltaAz:F1}° (from {currentAz:F1}° to {targetAz:F1}°).\n\n" +
+                    "Do you want to proceed with this slew?",
+                    "Large Azimuth Slew Confirmation",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning
+                );
+                if (result != System.Windows.MessageBoxResult.Yes) {
+                    _vm.Log($"[Verification Slew] Large CCW jump of {deltaAz:F1}° aborted by user.");
+                    return;
+                }
+            }
+
+            _vm.ActiveNodeIndex = ccwIndex;
+            SlewToActiveNode();
+        }
+
+        public void SlewCW() {
+            int count = _vm.HorizonNodes.Count;
+            if (count == 0) return;
+
+            double currentAz = _vm.CurrentAz;
+            int currentIndex = _vm.ActiveNodeIndex;
+            int cwIndex;
+            if (currentIndex == -1) {
+                int closestIndex = GetClosestNodeIndex(currentAz);
+                if (closestIndex != -1) {
+                    double diff = Math.Abs(currentAz - _vm.HorizonNodes[closestIndex].Azimuth) % 360.0;
+                    double dist = diff > 180.0 ? 360.0 - diff : diff;
+                    if (dist < 1.0) {
+                        cwIndex = (closestIndex + _vm.VerificationStepSize) % count;
+                    } else {
+                        cwIndex = closestIndex;
+                    }
+                } else {
+                    cwIndex = 0;
+                }
+            } else {
+                cwIndex = (currentIndex + _vm.VerificationStepSize) % count;
+            }
+
+            var targetNode = _vm.HorizonNodes[cwIndex];
+            double targetAz = targetNode.Azimuth;
+            double diffSlew = Math.Abs(currentAz - targetAz) % 360.0;
+            double deltaAz = diffSlew > 180.0 ? 360.0 - diffSlew : diffSlew;
+
+            if (deltaAz > 45.0) {
+                var result = System.Windows.MessageBox.Show(
+                    $"Warning: Slew CW requires a large azimuth movement of {deltaAz:F1}° (from {currentAz:F1}° to {targetAz:F1}°).\n\n" +
+                    "Do you want to proceed with this slew?",
+                    "Large Azimuth Slew Confirmation",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning
+                );
+                if (result != System.Windows.MessageBoxResult.Yes) {
+                    _vm.Log($"[Verification Slew] Large CW jump of {deltaAz:F1}° aborted by user.");
+                    return;
+                }
+            }
+
+            _vm.ActiveNodeIndex = cwIndex;
+            SlewToActiveNode();
+        }
+
+        private void SlewToActiveNode() {
+            var node = _vm.ActiveNode;
+            if (node == null) return;
+
+            if (!_vm.IsMountConnected) {
+                _vm.Log("[Error] Slewing blocked: Telescope mount is not connected.");
+                return;
+            }
+
+            if (_telescopeMediator.GetInfo()?.Slewing == true) {
+                _vm.Log("[Error] Slew blocked: Telescope is currently slewing.");
+                return;
+            }
+
+            double targetAlt = node.Altitude;
+            double targetAz = node.Azimuth;
+
+            // Update VM LastRequested Alt/Az so jogging is continuous
+            _vm.LastRequestedAlt = targetAlt;
+            _vm.LastRequestedAz = targetAz;
+
+            _vm.IsActionSlewing = true;
+
+            System.Threading.Tasks.Task.Run(async () => {
+                try {
+                    _vm.Log($"[Verification Slew] Slewing to active node - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
+
+                    double lat = _telescopeMediator.GetInfo()?.SiteLatitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Latitude ?? 0.0;
+                    double lon = _telescopeMediator.GetInfo()?.SiteLongitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Longitude ?? 0.0;
+
+                    var topo = new global::NINA.Astrometry.TopocentricCoordinates(
+                        global::NINA.Astrometry.Angle.ByDegree(targetAz),
+                        global::NINA.Astrometry.Angle.ByDegree(targetAlt),
+                        global::NINA.Astrometry.Angle.ByDegree(lat),
+                        global::NINA.Astrometry.Angle.ByDegree(lon)
+                    );
+
+                    DateTime startTime = DateTime.UtcNow;
+                    await _telescopeMediator.SlewToCoordinatesAsync(topo, CancellationToken.None);
+                    DateTime endTime = DateTime.UtcNow;
+
+                    // Exact Position Micro-Jump
+                    if (_vm.IsExactPositionEnabled) {
+                        double errorAlt = _vm.CurrentAlt - targetAlt;
+                        double errorAz = _vm.CurrentAz - targetAz;
+
+                        // Handle azimuth wrap-around error calculation (signed)
+                        if (errorAz > 180.0) errorAz -= 360.0;
+                        if (errorAz < -180.0) errorAz += 360.0;
+
+                        if (Math.Abs(errorAlt) > 0.01 || Math.Abs(errorAz) > 0.01) {
+                            double slewSeconds = (endTime - startTime).TotalSeconds;
+                            if (slewSeconds < 1.0) slewSeconds = 1.0; // Prevent div/0 anomalies
+
+                            // Calculate drift degrees per second
+                            double rateAlt = errorAlt / slewSeconds;
+                            double rateAz = errorAz / slewSeconds;
+
+                            // Predict target to cancel out 8.0s of drift
+                            double predictedAlt = targetAlt - (rateAlt * 8.0);
+                            double predictedAz = (targetAz - (rateAz * 8.0) + 360.0) % 360.0;
+
+                            _vm.Log($"[Exact Position] Drift error detected (Alt Error: {errorAlt:F3}°, Az Error: {errorAz:F3}°). Applied Predictive Lead. Initiating Micro-Jump...");
+
+                            var microTopo = new global::NINA.Astrometry.TopocentricCoordinates(
+                                global::NINA.Astrometry.Angle.ByDegree(predictedAz),
+                                global::NINA.Astrometry.Angle.ByDegree(predictedAlt),
+                                global::NINA.Astrometry.Angle.ByDegree(lat),
+                                global::NINA.Astrometry.Angle.ByDegree(lon)
+                            );
+
+                            await _telescopeMediator.SlewToCoordinatesAsync(microTopo, CancellationToken.None);
+                        }
+                    }
+
+                    _vm.Log("Slew completed.");
+                    _telescopeMediator.SetTrackingEnabled(false);
+                } catch (Exception ex) {
+                    _vm.Log($"[Error] Slew to active node failed: {ex.Message}");
+                } finally {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                        _vm.IsActionSlewing = false;
+                    });
+                }
+            });
         }
     }
 }
