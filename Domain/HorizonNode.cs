@@ -8,8 +8,8 @@ namespace NirZonshine.NINA.HorizonStudio.Domain {
     public class HorizonNode {
         // Radar canvas geometry constants — must match the 300x300 Canvas in Options.xaml.
         // Center is at (RadarCenterOffset, RadarCenterOffset); horizon ring radius is RadarMaxRadius.
-        private const double RadarMaxRadius = 120.0;
-        private const double RadarCenterOffset = 150.0;
+        private const double RadarMaxRadius = 220.0;
+        private const double RadarCenterOffset = 250.0;
 
         public double Azimuth { get; }
         public double Altitude { get; }

@@ -22,6 +22,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
         public ICommand UndoPinCommand { get; }
         public ICommand ClearPinsCommand { get; }
         public ICommand SaveHorizonCommand { get; }
+        public ICommand DeletePointCommand { get; }
 
         public ICommand SlewCCWCommand { get; }
         public ICommand SlewCWCommand { get; }
@@ -37,6 +38,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             UndoPinCommand = new RelayCommand(o => UndoPin());
             ClearPinsCommand = new RelayCommand(o => ClearPins());
             SaveHorizonCommand = new RelayCommand(o => SaveHorizon());
+            DeletePointCommand = new RelayCommand(o => DeletePoint(), o => _vm.HasActiveNode);
 
             SlewCCWCommand = new RelayCommand(o => SlewCCW());
             SlewCWCommand = new RelayCommand(o => SlewCW());
@@ -437,6 +439,208 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     });
                 }
             });
+        }
+
+        public void DeletePoint() {
+            var activeNode = _vm.ActiveNode;
+            if (activeNode == null) return;
+
+            _vm.HorizonNodes.Remove(activeNode);
+            
+            // Also remove from _pinHistory if it's there
+            var list = new List<HorizonNode>(_pinHistory);
+            list.Remove(activeNode);
+            _pinHistory.Clear();
+            for (int i = list.Count - 1; i >= 0; i--) {
+                _pinHistory.Push(list[i]);
+            }
+
+            _vm.ActiveNodeIndex = -1;
+            _vm.NodeCount = _vm.HorizonNodes.Count;
+
+            if (_pinHistory.Count > 0) {
+                var top = _pinHistory.Peek();
+                _vm.LastNodeAlt = top.Altitude;
+                _vm.LastNodeAz = top.Azimuth;
+                _vm.LastNodeText = top.ToString();
+            } else {
+                _vm.LastNodeAlt = 0.0;
+                _vm.LastNodeAz = 0.0;
+                _vm.LastNodeText = "None";
+            }
+
+            _vm.Log($"[Delete Point] Removed Horizon Node - Alt: {activeNode.Altitude:F2}°, Az: {activeNode.Azimuth:F2}° (Total: {_vm.NodeCount})");
+        }
+
+        public void RadarClickSlew(double canvasX, double canvasY) {
+            if (!_vm.IsMountConnected) {
+                _vm.Log("[Error] Slewing blocked: Telescope mount is not connected.");
+                return;
+            }
+
+            if (_telescopeMediator.GetInfo()?.Slewing == true) {
+                _vm.Log("[Error] Slew blocked: Telescope is currently slewing.");
+                return;
+            }
+
+            // Inverse Cartesian-to-polar projection math
+            double dx = canvasX - 250.0;
+            double dy = 250.0 - canvasY;
+            double r = Math.Sqrt(dx * dx + dy * dy);
+
+            // Radius constraint: outer boundary is 220.0
+            if (r > 220.0) {
+                r = 220.0;
+            }
+
+            double rad = Math.Atan2(dx, dy);
+            double azimuth = rad * 180.0 / Math.PI;
+            azimuth = (azimuth % 360.0 + 360.0) % 360.0;
+            double altitude = 90.0 - (90.0 * r / 220.0);
+            if (altitude < 0.0) altitude = 0.0;
+            if (altitude > 90.0) altitude = 90.0;
+
+            // Determine clicked altitude on the horizon line for snapping
+            double clickedAlt = _vm.HorizonNodes.Count > 0 ? _vm.GetInterpolatedAltitude(azimuth) : altitude;
+
+            // Enforce that the click must be near the horizon line (within 5.0 degrees in Altitude)
+            if (_vm.HorizonNodes.Count > 0) {
+                double altDiff = Math.Abs(altitude - clickedAlt);
+                if (altDiff > 5.0) {
+                    // Silent return to ignore clicks that are not near the horizon line
+                    return;
+                }
+            }
+
+            // Search for snap node within 2.5 degrees angular separation on the horizon line
+            int snappedIndex = -1;
+            for (int i = 0; i < _vm.HorizonNodes.Count; i++) {
+                var node = _vm.HorizonNodes[i];
+                double dist = GetAngularDistance(azimuth, clickedAlt, node.Azimuth, node.Altitude);
+                if (dist < 2.5) {
+                    snappedIndex = i;
+                    break;
+                }
+            }
+
+            double targetAlt;
+            double targetAz;
+
+            if (snappedIndex != -1) {
+                _vm.ActiveNodeIndex = snappedIndex;
+                var snappedNode = _vm.HorizonNodes[snappedIndex];
+                targetAlt = snappedNode.Altitude;
+                targetAz = snappedNode.Azimuth;
+                _vm.Log($"[Radar Click] Snapped to existing Horizon Node at index {snappedIndex} - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
+            } else {
+                _vm.ActiveNodeIndex = -1;
+                if (_vm.HorizonNodes.Count == 0) {
+                    targetAlt = _vm.CurrentAlt;
+                    _vm.Log($"[Radar Click] Clicked radar with 0 nodes. Maintaining current altitude - Alt: {targetAlt:F2}°, Az: {azimuth:F2}°");
+                } else {
+                    targetAlt = _vm.GetInterpolatedAltitude(azimuth);
+                    _vm.Log($"[Radar Click] Clicked unmapped area. Interpolating target - Alt: {targetAlt:F2}°, Az: {azimuth:F2}°");
+                }
+                targetAz = azimuth;
+            }
+
+            // Large Azimuth Slew Safeguard (> 45°)
+            double currentAz = _vm.CurrentAz;
+            double diffSlew = Math.Abs(currentAz - targetAz) % 360.0;
+            double deltaAz = diffSlew > 180.0 ? 360.0 - diffSlew : diffSlew;
+
+            if (deltaAz > 45.0) {
+                var result = System.Windows.MessageBox.Show(
+                    $"Warning: Clicked radar target requires a large azimuth movement of {deltaAz:F1}° (from {currentAz:F1}° to {targetAz:F1}°).\n\n" +
+                    "Do you want to proceed with this slew?",
+                    "Large Azimuth Slew Confirmation",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning
+                );
+                if (result != System.Windows.MessageBoxResult.Yes) {
+                    _vm.Log($"[Radar Slew] Large click jump of {deltaAz:F1}° aborted by user.");
+                    return;
+                }
+            }
+
+            // Perform Slew
+            _vm.LastRequestedAlt = targetAlt;
+            _vm.LastRequestedAz = targetAz;
+            _vm.IsActionSlewing = true;
+
+            System.Threading.Tasks.Task.Run(async () => {
+                try {
+                    _vm.Log($"[Radar Slew] Slewing mount to - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
+
+                    double lat = _telescopeMediator.GetInfo()?.SiteLatitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Latitude ?? 0.0;
+                    double lon = _telescopeMediator.GetInfo()?.SiteLongitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Longitude ?? 0.0;
+
+                    var topo = new global::NINA.Astrometry.TopocentricCoordinates(
+                        global::NINA.Astrometry.Angle.ByDegree(targetAz),
+                        global::NINA.Astrometry.Angle.ByDegree(targetAlt),
+                        global::NINA.Astrometry.Angle.ByDegree(lat),
+                        global::NINA.Astrometry.Angle.ByDegree(lon)
+                    );
+
+                    DateTime startTime = DateTime.UtcNow;
+                    await _telescopeMediator.SlewToCoordinatesAsync(topo, CancellationToken.None);
+                    DateTime endTime = DateTime.UtcNow;
+
+                    // Exact Position Micro-Jump
+                    if (_vm.IsExactPositionEnabled) {
+                        double errorAlt = _vm.CurrentAlt - targetAlt;
+                        double errorAz = _vm.CurrentAz - targetAz;
+
+                        // Handle azimuth wrap-around error calculation (signed)
+                        if (errorAz > 180.0) errorAz -= 360.0;
+                        if (errorAz < -180.0) errorAz += 360.0;
+
+                        if (Math.Abs(errorAlt) > 0.01 || Math.Abs(errorAz) > 0.01) {
+                            double slewSeconds = (endTime - startTime).TotalSeconds;
+                            if (slewSeconds < 1.0) slewSeconds = 1.0;
+
+                            double rateAlt = errorAlt / slewSeconds;
+                            double rateAz = errorAz / slewSeconds;
+
+                            double predictedAlt = targetAlt - (rateAlt * 8.0);
+                            double predictedAz = (targetAz - (rateAz * 8.0) + 360.0) % 360.0;
+
+                            _vm.Log($"[Exact Position] Drift error detected (Alt Error: {errorAlt:F3}°, Az Error: {errorAz:F3}°). Applied Predictive Lead. Initiating Micro-Jump...");
+
+                            var microTopo = new global::NINA.Astrometry.TopocentricCoordinates(
+                                global::NINA.Astrometry.Angle.ByDegree(predictedAz),
+                                global::NINA.Astrometry.Angle.ByDegree(predictedAlt),
+                                global::NINA.Astrometry.Angle.ByDegree(lat),
+                                global::NINA.Astrometry.Angle.ByDegree(lon)
+                            );
+
+                            await _telescopeMediator.SlewToCoordinatesAsync(microTopo, CancellationToken.None);
+                        }
+                    }
+
+                    _vm.Log("Slew completed.");
+                    _telescopeMediator.SetTrackingEnabled(false);
+                } catch (Exception ex) {
+                    _vm.Log($"[Error] Radar click slew failed: {ex.Message}");
+                } finally {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                        _vm.IsActionSlewing = false;
+                    });
+                }
+            });
+        }
+
+        private double GetAngularDistance(double az1, double alt1, double az2, double alt2) {
+            double rad = Math.PI / 180.0;
+            double rAz1 = az1 * rad;
+            double rAlt1 = alt1 * rad;
+            double rAz2 = az2 * rad;
+            double rAlt2 = alt2 * rad;
+
+            double cosTheta = Math.Sin(rAlt1) * Math.Sin(rAlt2) + Math.Cos(rAlt1) * Math.Cos(rAlt2) * Math.Cos(rAz1 - rAz2);
+            cosTheta = Math.Max(-1.0, Math.Min(1.0, cosTheta));
+
+            return Math.Acos(cosTheta) * 180.0 / Math.PI;
         }
     }
 }

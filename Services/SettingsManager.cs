@@ -38,6 +38,7 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
         private double _cameraRotationOffset = 0.0;
         private bool _isExactPositionEnabled = false;
         private int _verificationStepSize = 1;
+        private bool _isRadarOverlayEnabled = false;
 
         public SettingsManager(IProfileService profileService) {
             _profileService = profileService;
@@ -168,6 +169,12 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
             set { if (_verificationStepSize != value) { _verificationStepSize = value; SaveSetting(nameof(VerificationStepSize), value); OnPropertyChanged(); } }
         }
 
+        public bool IsRadarOverlayEnabled {
+            get => _isRadarOverlayEnabled;
+            set { if (_isRadarOverlayEnabled != value) { _isRadarOverlayEnabled = value; SaveSetting(nameof(IsRadarOverlayEnabled), value); OnPropertyChanged(); } }
+        }
+
+
         private void LoadSettings() {
             try {
                 if (_accessor == null) return;
@@ -192,6 +199,7 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
                 _cameraRotationOffset = _accessor.GetValueDouble(nameof(CameraRotationOffset), 0.0);
                 _isExactPositionEnabled = _accessor.GetValueBoolean(nameof(IsExactPositionEnabled), false);
                 _verificationStepSize = _accessor.GetValueInt32(nameof(VerificationStepSize), 1);
+                _isRadarOverlayEnabled = _accessor.GetValueBoolean(nameof(IsRadarOverlayEnabled), false);
 
                 OnPropertyChanged(string.Empty);
             } catch (Exception ex) {

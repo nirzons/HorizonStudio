@@ -34,8 +34,13 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         void HandleImageClick(double x, double y, double frameWidth, double frameHeight);
     }
 
+    public interface IRadarClickHandler {
+        void HandleRadarClick(double x, double y);
+        bool IsNearHorizon(double canvasX, double canvasY);
+    }
+
     [Export(typeof(global::NINA.Equipment.Interfaces.ViewModel.IDockableVM))]
-    public class HorizonMapperDockableVM : DockableVM, ICameraConsumer, ITelescopeConsumer, IImageClickHandler {
+    public class HorizonMapperDockableVM : DockableVM, ICameraConsumer, ITelescopeConsumer, IImageClickHandler, IRadarClickHandler {
         private readonly IProfileService _profileService;
         private readonly ICameraMediator _cameraMediator;
         private readonly ITelescopeMediator _telescopeMediator;
@@ -48,6 +53,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
         private bool _disposed = false;
         private ImageSource _lastFrame;
+        private double _lastFrameWidth = 0;
+        private double _lastFrameHeight = 0;
         private DeviceDescriptor _selectedWebcam;
         private WebcamState _currentWebcamState = WebcamState.Disconnected;
         internal int TaskExecutingFlag = 0;
@@ -295,6 +302,15 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             set {
                 _lastFrame = value;
                 RaisePropertyChanged(nameof(LastFrame));
+
+                if (value is System.Windows.Media.Imaging.BitmapSource bmp) {
+                    if (bmp.PixelWidth != _lastFrameWidth || bmp.PixelHeight != _lastFrameHeight) {
+                        _lastFrameWidth = bmp.PixelWidth;
+                        _lastFrameHeight = bmp.PixelHeight;
+                        RaisePropertyChanged(nameof(AlignmentTranslationX));
+                        RaisePropertyChanged(nameof(AlignmentTranslationY));
+                    }
+                }
             }
         }
 
@@ -417,6 +433,9 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 if (_isCoAligning != value) {
                     _isCoAligning = value;
                     RaisePropertyChanged(nameof(IsCoAligning));
+                    RaisePropertyChanged(nameof(AlignmentTranslationX));
+                    RaisePropertyChanged(nameof(AlignmentTranslationY));
+                    UpdateRotationAngle();
                 }
             }
         }
@@ -427,6 +446,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 _settingsManager.IsCoAligned = value;
                 RaisePropertyChanged(nameof(IsCoAligned));
                 RaisePropertyChanged(nameof(AlignmentCenterPoint));
+                RaisePropertyChanged(nameof(AlignmentTranslationX));
+                RaisePropertyChanged(nameof(AlignmentTranslationY));
             }
         }
 
@@ -436,6 +457,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 _settingsManager.AlignmentCenterX = value;
                 RaisePropertyChanged(nameof(AlignmentCenterX));
                 RaisePropertyChanged(nameof(AlignmentCenterPoint));
+                RaisePropertyChanged(nameof(AlignmentTranslationX));
+                RaisePropertyChanged(nameof(AlignmentTranslationY));
             }
         }
 
@@ -445,6 +468,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 _settingsManager.AlignmentCenterY = value;
                 RaisePropertyChanged(nameof(AlignmentCenterY));
                 RaisePropertyChanged(nameof(AlignmentCenterPoint));
+                RaisePropertyChanged(nameof(AlignmentTranslationX));
+                RaisePropertyChanged(nameof(AlignmentTranslationY));
             }
         }
 
@@ -452,6 +477,46 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             IsCoAligned ? AlignmentCenterX : 0.5,
             IsCoAligned ? AlignmentCenterY : 0.5
         );
+
+        public double AlignmentTranslationX {
+            get {
+                if (IsCoAligning || !IsCoAligned || LastFrame == null) return 0.0;
+                double imgWidth = 0;
+                double imgHeight = 0;
+                if (LastFrame is System.Windows.Media.Imaging.BitmapSource bmp) {
+                    imgWidth = bmp.PixelWidth;
+                    imgHeight = bmp.PixelHeight;
+                }
+                if (imgWidth <= 0 || imgHeight <= 0) return 0.0;
+
+                double scaleX = 600.0 / imgWidth;
+                double scaleY = 600.0 / imgHeight;
+                double scale = Math.Max(scaleX, scaleY);
+
+                double renderWidth = imgWidth * scale;
+                return renderWidth * (0.5 - AlignmentCenterX);
+            }
+        }
+
+        public double AlignmentTranslationY {
+            get {
+                if (IsCoAligning || !IsCoAligned || LastFrame == null) return 0.0;
+                double imgWidth = 0;
+                double imgHeight = 0;
+                if (LastFrame is System.Windows.Media.Imaging.BitmapSource bmp) {
+                    imgWidth = bmp.PixelWidth;
+                    imgHeight = bmp.PixelHeight;
+                }
+                if (imgWidth <= 0 || imgHeight <= 0) return 0.0;
+
+                double scaleX = 600.0 / imgWidth;
+                double scaleY = 600.0 / imgHeight;
+                double scale = Math.Max(scaleX, scaleY);
+
+                double renderHeight = imgHeight * scale;
+                return renderHeight * (0.5 - AlignmentCenterY);
+            }
+        }
 
         public bool IsCounterRotationEnabled {
             get => _settingsManager.IsCounterRotationEnabled;
@@ -478,6 +543,15 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 RaisePropertyChanged(nameof(IsExactPositionEnabled));
             }
         }
+
+        public bool IsRadarOverlayEnabled {
+            get => _settingsManager.IsRadarOverlayEnabled;
+            set {
+                _settingsManager.IsRadarOverlayEnabled = value;
+                RaisePropertyChanged(nameof(IsRadarOverlayEnabled));
+            }
+        }
+
 
         public double? LastRequestedAlt { get; set; }
         public double? LastRequestedAz { get; set; }
@@ -508,8 +582,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
         public bool HasActiveNode => ActiveNode != null;
 
-        public double ActiveNodeRadarX => ActiveNode?.RadarX ?? 150.0;
-        public double ActiveNodeRadarY => ActiveNode?.RadarY ?? 150.0;
+        public double ActiveNodeRadarX => ActiveNode?.RadarX ?? 250.0;
+        public double ActiveNodeRadarY => ActiveNode?.RadarY ?? 250.0;
 
         private bool _isActionSlewing = false;
         public bool IsActionSlewing {
@@ -552,17 +626,17 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
         public double TelescopeRadarX {
             get {
-                double r = 120.0 * (90.0 - CurrentAlt) / 90.0;
+                double r = 220.0 * (90.0 - CurrentAlt) / 90.0;
                 double rad = CurrentAz * Math.PI / 180.0;
-                return 150.0 + r * Math.Sin(rad);
+                return 250.0 + r * Math.Sin(rad);
             }
         }
 
         public double TelescopeRadarY {
             get {
-                double r = 120.0 * (90.0 - CurrentAlt) / 90.0;
+                double r = 220.0 * (90.0 - CurrentAlt) / 90.0;
                 double rad = CurrentAz * Math.PI / 180.0;
-                return 150.0 - r * Math.Cos(rad);
+                return 250.0 - r * Math.Cos(rad);
             }
         }
 
@@ -619,17 +693,17 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 // This ensures a perfectly smooth polar circle/spiral arc that matches N.I.N.A.'s interpolation!
                 for (double az = 0.0; az < 360.0; az += 1.0) {
                     double alt = GetInterpolatedAltitude(az);
-                    double r = 120.0 * (90.0 - alt) / 90.0;
+                    double r = 220.0 * (90.0 - alt) / 90.0;
                     double rad = az * Math.PI / 180.0;
-                    double x = 150.0 + r * Math.Sin(rad);
-                    double y = 150.0 - r * Math.Cos(rad);
+                    double x = 250.0 + r * Math.Sin(rad);
+                    double y = 250.0 - r * Math.Cos(rad);
                     points.Add(new System.Windows.Point(x, y));
                 }
 
                 // Add the start point at 360° (0°) to close the loop
                 double startAlt = GetInterpolatedAltitude(0.0);
-                double startR = 120.0 * (90.0 - startAlt) / 90.0;
-                points.Add(new System.Windows.Point(150.0, 150.0 - startR));
+                double startR = 220.0 * (90.0 - startAlt) / 90.0;
+                points.Add(new System.Windows.Point(250.0, 250.0 - startR));
 
                 return points;
             }
@@ -643,18 +717,18 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 // 1. Trace the outer circle clockwise (Altitude = 0)
                 for (double az = 0.0; az <= 360.0; az += 2.0) {
                     double rad = az * Math.PI / 180.0;
-                    double x = 150.0 + 120.0 * Math.Sin(rad);
-                    double y = 150.0 - 120.0 * Math.Cos(rad);
+                    double x = 250.0 + 220.0 * Math.Sin(rad);
+                    double y = 250.0 - 220.0 * Math.Cos(rad);
                     points.Add(new System.Windows.Point(x, y));
                 }
 
                 // 2. Trace the horizon line counter-clockwise (decreasing azimuth) back to the start
                 for (double az = 360.0; az >= 0.0; az -= 2.0) {
                     double alt = GetInterpolatedAltitude(az);
-                    double r = 120.0 * (90.0 - alt) / 90.0;
+                    double r = 220.0 * (90.0 - alt) / 90.0;
                     double rad = az * Math.PI / 180.0;
-                    double x = 150.0 + r * Math.Sin(rad);
-                    double y = 150.0 - r * Math.Cos(rad);
+                    double x = 250.0 + r * Math.Sin(rad);
+                    double y = 250.0 - r * Math.Cos(rad);
                     points.Add(new System.Windows.Point(x, y));
                 }
 
@@ -710,7 +784,35 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             }
         }
 
+        public void HandleRadarClick(double x, double y) {
+            _mappingCommands.RadarClickSlew(x, y);
+        }
+
+        public bool IsNearHorizon(double canvasX, double canvasY) {
+            if (HorizonNodes.Count == 0) return true;
+
+            double dx = canvasX - 250.0;
+            double dy = 250.0 - canvasY;
+            double r = Math.Sqrt(dx * dx + dy * dy);
+            if (r > 220.0) r = 220.0;
+
+            double rad = Math.Atan2(dx, dy);
+            double azimuth = rad * 180.0 / Math.PI;
+            azimuth = (azimuth % 360.0 + 360.0) % 360.0;
+            double altitude = 90.0 - (90.0 * r / 220.0);
+            if (altitude < 0.0) altitude = 0.0;
+            if (altitude > 90.0) altitude = 90.0;
+
+            double horizonAlt = GetInterpolatedAltitude(azimuth);
+            return Math.Abs(altitude - horizonAlt) <= 5.0;
+        }
+
         private void UpdateRotationAngle() {
+            if (IsCoAligning) {
+                WebcamImageRotationAngle = 0.0;
+                return;
+            }
+
             if (!IsMountConnected) {
                 WebcamImageRotationAngle = 0.0;
                 return;
@@ -812,6 +914,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public ICommand UndoPinCommand => _mappingCommands.UndoPinCommand;
         public ICommand ClearPinsCommand => _mappingCommands.ClearPinsCommand;
         public ICommand SaveHorizonCommand => _mappingCommands.SaveHorizonCommand;
+        public ICommand DeletePointCommand => _mappingCommands.DeletePointCommand;
 
         public ICommand SlewCCWCommand => _mappingCommands.SlewCCWCommand;
         public ICommand SlewCWCommand => _mappingCommands.SlewCWCommand;

@@ -143,99 +143,254 @@
                                     <TextBlock Text="UVC Webcam Live Stream" FontSize="13" FontWeight="Bold" Foreground="DarkGray" Margin="0,10,0,2" HorizontalAlignment="Center" />
                                     <TextBlock Text="Active UVC webcam frames will display here." FontSize="10" Foreground="Gray" HorizontalAlignment="Center" />
                                 </StackPanel>
+                                <!-- Symmetric Circular Eyepiece Webcam Display Container (Auto-scaling inside a Viewbox) -->
+                                <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Grid Width="540" Height="540">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="ClipToBounds" Value="True" />
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsWebcamActive}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsCoAligning}" Value="True">
+                                                    <Setter Property="ClipToBounds" Value="False" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
 
-                                <!-- Rotatable webcam feed wrapper, rotating around the co-alignment center in EQ mode -->
-                                <Grid RenderTransformOrigin="{Binding AlignmentCenterPoint}">
-                                    <Grid.RenderTransform>
-                                        <RotateTransform Angle="{Binding WebcamImageRotationAngle}" />
-                                    </Grid.RenderTransform>
+                                    <!-- 1. The rotating webcam feed (Width/Height 600x600, rotating around the co-alignment center) -->
+                                    <Grid Width="600" Height="600" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Grid.RenderTransform>
+                                            <TransformGroup>
+                                                <TranslateTransform X="{Binding AlignmentTranslationX}" Y="{Binding AlignmentTranslationY}" />
+                                                <RotateTransform CenterX="300" CenterY="300" Angle="{Binding WebcamImageRotationAngle}" />
+                                            </TransformGroup>
+                                        </Grid.RenderTransform>
 
-                                    <!-- Video Stream Source -->
-                                    <Image x:Name="WebcamImage" Source="{Binding LastFrame}" Stretch="Uniform" MouseLeftButtonDown="Image_MouseLeftButtonDown" Cursor="Cross" />
+                                        <!-- Video Stream Source (Stretched to fill the entire eyepiece area cleanly) -->
+                                        <Image x:Name="WebcamImage" Source="{Binding LastFrame}" Stretch="UniformToFill" MouseLeftButtonDown="Image_MouseLeftButtonDown" Cursor="Cross" />
 
-                                    <!-- Aspect-Ratio-Locked Overlays Grid -->
-                                    <Grid x:Name="OverlayContainer" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
-                                        <Grid.Width>
-                                            <MultiBinding Converter="{StaticResource RenderedImageSizeConverter}" ConverterParameter="Width">
-                                                <Binding Path="ActualWidth" ElementName="WebcamImage" />
-                                                <Binding Path="ActualHeight" ElementName="WebcamImage" />
-                                                <Binding Path="LastFrame.PixelWidth" />
-                                                <Binding Path="LastFrame.PixelHeight" />
-                                            </MultiBinding>
-                                        </Grid.Width>
-                                        <Grid.Height>
-                                            <MultiBinding Converter="{StaticResource RenderedImageSizeConverter}" ConverterParameter="Height">
-                                                <Binding Path="ActualWidth" ElementName="WebcamImage" />
-                                                <Binding Path="ActualHeight" ElementName="WebcamImage" />
-                                                <Binding Path="LastFrame.PixelWidth" />
-                                                <Binding Path="LastFrame.PixelHeight" />
-                                            </MultiBinding>
-                                        </Grid.Height>
+                                        <!-- Aspect-Ratio-Locked Overlays Grid -->
+                                        <Grid x:Name="OverlayContainer" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                            <Grid.Width>
+                                                <MultiBinding Converter="{StaticResource RenderedImageSizeConverter}" ConverterParameter="Width">
+                                                    <Binding Path="ActualWidth" ElementName="WebcamImage" />
+                                                    <Binding Path="ActualHeight" ElementName="WebcamImage" />
+                                                    <Binding Path="LastFrame.PixelWidth" />
+                                                    <Binding Path="LastFrame.PixelHeight" />
+                                                </MultiBinding>
+                                            </Grid.Width>
+                                            <Grid.Height>
+                                                <MultiBinding Converter="{StaticResource RenderedImageSizeConverter}" ConverterParameter="Height">
+                                                    <Binding Path="ActualWidth" ElementName="WebcamImage" />
+                                                    <Binding Path="ActualHeight" ElementName="WebcamImage" />
+                                                    <Binding Path="LastFrame.PixelWidth" />
+                                                    <Binding Path="LastFrame.PixelHeight" />
+                                                </MultiBinding>
+                                            </Grid.Height>
 
-                                        <!-- Concentric geometric center target HUD (Premium Cyan #FF00F3FF) -->
-                                        <Grid IsHitTestVisible="False" Opacity="0.65">
-                                            <Grid.Style>
-                                                <Style TargetType="Grid">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsWebcamActive}" Value="True">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Grid.Style>
-                                            <Ellipse Width="180" Height="180" Stroke="#8000F3FF" StrokeThickness="0.8" StrokeDashArray="4,4" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <Ellipse Width="80" Height="80" Stroke="#FF00F3FF" StrokeThickness="1.5" StrokeDashArray="2,2" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <Ellipse Width="8" Height="8" Fill="#FF00F3FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <Rectangle Width="1" Fill="#8000F3FF" StrokeDashArray="3,3" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="0,10" />
-                                            <Rectangle Height="1" Fill="#8000F3FF" StrokeDashArray="3,3" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,0" />
+                                            <!-- Concentric geometric center target HUD (Premium Cyan #FF00F3FF) -->
+                                            <Grid IsHitTestVisible="False" Opacity="0.65">
+                                                <Ellipse Width="240" Height="240" Stroke="#8000F3FF" StrokeThickness="0.8" StrokeDashArray="4,4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Ellipse Width="110" Height="110" Stroke="#FF00F3FF" StrokeThickness="1.5" StrokeDashArray="2,2" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Ellipse Width="10" Height="10" Fill="#FF00F3FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Rectangle Width="1" Fill="#8000F3FF" StrokeDashArray="3,3" VerticalAlignment="Stretch" HorizontalAlignment="Center" Margin="0,10" />
+                                                <Rectangle Height="1" Fill="#8000F3FF" StrokeDashArray="3,3" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="10,0" />
+                                            </Grid>
+
+                                            <!-- Dynamic Co-Alignment Target Reticle (Premium Orange #FFF59E0B) -->
+                                            <Canvas IsHitTestVisible="False">
+                                                <Canvas.Style>
+                                                    <Style TargetType="Canvas">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCoAligned}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsCoAligning}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Canvas.Style>
+                                                <Grid Width="60" Height="60" Margin="-30,-30,0,0">
+                                                    <Canvas.Left>
+                                                        <MultiBinding Converter="{StaticResource RatioToCoordinateConverter}">
+                                                            <Binding Path="AlignmentCenterX" />
+                                                            <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Canvas}" />
+                                                        </MultiBinding>
+                                                    </Canvas.Left>
+                                                    <Canvas.Top>
+                                                        <MultiBinding Converter="{StaticResource RatioToCoordinateConverter}">
+                                                            <Binding Path="AlignmentCenterY" />
+                                                            <Binding Path="ActualHeight" RelativeSource="{RelativeSource AncestorType=Canvas}" />
+                                                        </MultiBinding>
+                                                    </Canvas.Top>
+                                                    <Ellipse Width="40" Height="40" Stroke="#FFF59E0B" StrokeThickness="1.5" StrokeDashArray="2,2" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <Ellipse Width="16" Height="16" Stroke="#FFF59E0B" StrokeThickness="1.0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <Ellipse Width="6" Height="6" Fill="#FFF59E0B" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <Line X1="0" Y1="30" X2="60" Y2="30" Stroke="#FFF59E0B" StrokeThickness="1.0" StrokeDashArray="3,3" />
+                                                    <Line X1="30" Y1="0" X2="30" Y2="60" Stroke="#FFF59E0B" StrokeThickness="1.0" StrokeDashArray="3,3" />
+                                                </Grid>
+                                            </Canvas>
                                         </Grid>
+                                    </Grid>
 
-                                        <!-- Dynamic Co-Alignment Target Reticle (Premium Orange #FFF59E0B) -->
+                                    <!-- 2. The stationary Donut Mask Overlay (Centering a circular transparent eyepiece cutout of radius 220) -->
+                                    <Path Fill="#0c0c0e" IsHitTestVisible="False">
+                                        <Path.Style>
+                                            <Style TargetType="Path">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCoAligning}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Path.Style>
+                                        <Path.Data>
+                                            <CombinedGeometry GeometryCombineMode="Exclude">
+                                                <CombinedGeometry.Geometry1>
+                                                    <RectangleGeometry Rect="-100,-100,740,740" />
+                                                </CombinedGeometry.Geometry1>
+                                                <CombinedGeometry.Geometry2>
+                                                    <EllipseGeometry Center="270,270" RadiusX="220" RadiusY="220" />
+                                                </CombinedGeometry.Geometry2>
+                                            </CombinedGeometry>
+                                        </Path.Data>
+                                    </Path>
+
+                                    <!-- Eyepiece border ring -->
+                                    <Ellipse Width="440" Height="440" Stroke="#40818CF8" StrokeThickness="2.0" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCoAligning}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+
+                                    <!-- 3. Futuristic Augmented Reality HUD Radar Overlay (0.85 opacity) -->
+                                    <Canvas Width="500" Height="500" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False" MouseLeftButtonDown="RadarCanvas_MouseLeftButtonDown" MouseMove="RadarCanvas_MouseMove" Cursor="Hand" Opacity="0.85">
+                                        <Canvas.Style>
+                                            <Style TargetType="Canvas">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Setter Property="IsHitTestVisible" Value="True" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsRadarOverlayEnabled}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsCoAligning}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Setter Property="IsHitTestVisible" Value="False" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Canvas.Style>
+
+                                        <!-- Concentric HUD Rings -->
+                                        <Ellipse Canvas.Left="30" Canvas.Top="30" Width="440" Height="440" Stroke="#FF818CF8" StrokeThickness="1.2" />
+                                        <Ellipse Canvas.Left="103.33" Canvas.Top="103.33" Width="293.33" Height="293.33" Stroke="#A0818CF8" StrokeThickness="0.8" StrokeDashArray="4,4" />
+                                        <Ellipse Canvas.Left="176.67" Canvas.Top="176.67" Width="146.67" Height="146.67" Stroke="#A0818CF8" StrokeThickness="0.8" StrokeDashArray="4,4" />
+                                        <Ellipse Canvas.Left="237.78" Canvas.Top="237.78" Width="24.44" Height="24.44" Stroke="#A0EF4444" StrokeThickness="0.8" StrokeDashArray="2,2" />
+                                        <Ellipse Canvas.Left="248" Canvas.Top="248" Width="4" Height="4" Fill="#FF818CF8" />
+
+                                        <!-- Radial Azimuth lines -->
+                                        <Line X1="250" Y1="30" X2="250" Y2="470" Stroke="#FF818CF8" StrokeThickness="0.8" />
+                                        <Line X1="30" Y1="250" X2="470" Y2="250" Stroke="#FF818CF8" StrokeThickness="0.8" />
+
+                                        <!-- Cardinal Labels -->
+                                        <TextBlock Text="N" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="245" Canvas.Top="10" />
+                                        <TextBlock Text="S" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="245" Canvas.Top="475" />
+                                        <TextBlock Text="E" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="475" Canvas.Top="242" />
+                                        <TextBlock Text="W" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="12" Canvas.Top="242" />
+
+                                        <!-- Horizon Obstacle Shaded Zone -->
+                                        <Polygon Points="{Binding RadarObstructionPoints}" Fill="#3000F3FF" IsHitTestVisible="False" />
+
+                                        <!-- Horizon Obstacle Trace Line -->
+                                        <Polyline Points="{Binding RadarHorizonPoints}" Stroke="#FF00F3FF" StrokeThickness="2.0" StrokeLineJoin="Round" IsHitTestVisible="False" />
+
+                                        <!-- Dropped Pins Nodes -->
+                                        <ItemsControl ItemsSource="{Binding HorizonNodes}" IsHitTestVisible="False">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas Width="500" Height="500" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding RadarX}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding RadarY}" />
+                                                    <Setter Property="Margin" Value="-3,-3,0,0" />
+                                                </Style>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Ellipse Width="6" Height="6" Fill="#FFF59E0B" Stroke="#FF0c0c0e" StrokeThickness="1.0" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Mount Slew Crosshair -->
                                         <Canvas IsHitTestVisible="False">
                                             <Canvas.Style>
                                                 <Style TargetType="Canvas">
                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                     <Style.Triggers>
-                                                        <MultiDataTrigger>
-                                                            <MultiDataTrigger.Conditions>
-                                                                <Condition Binding="{Binding IsWebcamActive}" Value="True" />
-                                                                <Condition Binding="{Binding IsCoAligned}" Value="True" />
-                                                            </MultiDataTrigger.Conditions>
+                                                        <DataTrigger Binding="{Binding IsMountConnected}" Value="True">
                                                             <Setter Property="Visibility" Value="Visible" />
-                                                        </MultiDataTrigger>
-                                                        <MultiDataTrigger>
-                                                            <MultiDataTrigger.Conditions>
-                                                                <Condition Binding="{Binding IsWebcamActive}" Value="True" />
-                                                                <Condition Binding="{Binding IsCoAligning}" Value="True" />
-                                                            </MultiDataTrigger.Conditions>
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </MultiDataTrigger>
+                                                        </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Canvas.Style>
-                                            <Grid Width="60" Height="60" Margin="-30,-30,0,0">
+                                            <Grid Width="20" Height="20" Margin="-10,-10,0,0">
                                                 <Canvas.Left>
-                                                    <MultiBinding Converter="{StaticResource RatioToCoordinateConverter}">
-                                                        <Binding Path="AlignmentCenterX" />
-                                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Canvas}" />
-                                                    </MultiBinding>
+                                                    <Binding Path="TelescopeRadarX" />
                                                 </Canvas.Left>
                                                 <Canvas.Top>
-                                                    <MultiBinding Converter="{StaticResource RatioToCoordinateConverter}">
-                                                        <Binding Path="AlignmentCenterY" />
-                                                        <Binding Path="ActualHeight" RelativeSource="{RelativeSource AncestorType=Canvas}" />
-                                                    </MultiBinding>
+                                                    <Binding Path="TelescopeRadarY" />
                                                 </Canvas.Top>
-                                                <Ellipse Width="40" Height="40" Stroke="#FFF59E0B" StrokeThickness="1.5" StrokeDashArray="2,2" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                <Ellipse Width="16" Height="16" Stroke="#FFF59E0B" StrokeThickness="1.0" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                <Ellipse Width="6" Height="6" Fill="#FFF59E0B" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                <Line X1="0" Y1="30" X2="60" Y2="30" Stroke="#FFF59E0B" StrokeThickness="1.0" StrokeDashArray="3,3" />
-                                                <Line X1="30" Y1="0" X2="30" Y2="60" Stroke="#FFF59E0B" StrokeThickness="1.0" StrokeDashArray="3,3" />
+                                                <Ellipse Width="14" Height="14" Stroke="#EF4444" StrokeThickness="1.2" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Ellipse Width="3" Height="3" Fill="#EF4444" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Line X1="0" Y1="10" X2="20" Y2="10" Stroke="#EF4444" StrokeThickness="0.8" />
+                                                <Line X1="10" Y1="0" X2="10" Y2="20" Stroke="#EF4444" StrokeThickness="0.8" />
                                             </Grid>
                                         </Canvas>
-                                    </Grid>
+
+                                        <!-- Active Selected Node Reticle -->
+                                        <Canvas IsHitTestVisible="False">
+                                            <Canvas.Style>
+                                                <Style TargetType="Canvas">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasActiveNode}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Canvas.Style>
+                                            <Grid Width="16" Height="16" Margin="-8,-8,0,0">
+                                                <Canvas.Left>
+                                                    <Binding Path="ActiveNodeRadarX" />
+                                                </Canvas.Left>
+                                                <Canvas.Top>
+                                                    <Binding Path="ActiveNodeRadarY" />
+                                                </Canvas.Top>
+                                                <Ellipse Width="12" Height="12" Stroke="#FF00F3FF" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Ellipse Width="3" Height="3" Fill="#FF00F3FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Canvas>
+                                    </Canvas>
                                 </Grid>
+                            </Viewbox>
                             </Grid>
                         </Border>
                     </TabItem>
@@ -243,43 +398,44 @@
                     <!-- Tab 2: Sky Dome Radar -->
                     <TabItem Header="🌐 Sky Dome Radar">
                         <Grid Background="#0c0c0e" MinWidth="320" MinHeight="320">
-                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                                <Grid Width="340" Height="340" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10">
+                            <!-- Sky Dome Radar Canvas Container (Auto-scaling inside a Viewbox) -->
+                            <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10">
+                                    <Grid Width="540" Height="540">
                                     <!-- Radial Sky Grid Canvas -->
-                                    <Canvas Width="300" Height="300" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
+                                    <Canvas Width="500" Height="500" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False" MouseLeftButtonDown="RadarCanvas_MouseLeftButtonDown" MouseMove="RadarCanvas_MouseMove" Cursor="Hand">
                                         <!-- Concentric Grid Circles -->
                                         <!-- Horizon (0°) -->
-                                        <Ellipse Canvas.Left="30" Canvas.Top="30" Width="240" Height="240" Stroke="#30818CF8" StrokeThickness="1.5" />
+                                        <Ellipse Canvas.Left="30" Canvas.Top="30" Width="440" Height="440" Stroke="#30818CF8" StrokeThickness="1.5" />
                                         <!-- 30° Altitude -->
-                                        <Ellipse Canvas.Left="70" Canvas.Top="70" Width="160" Height="160" Stroke="#15818CF8" StrokeThickness="1" StrokeDashArray="4,4" />
+                                        <Ellipse Canvas.Left="103.33" Canvas.Top="103.33" Width="293.33" Height="293.33" Stroke="#15818CF8" StrokeThickness="1" StrokeDashArray="4,4" />
                                         <!-- 60° Altitude -->
-                                        <Ellipse Canvas.Left="110" Canvas.Top="110" Width="80" Height="80" Stroke="#15818CF8" StrokeThickness="1" StrokeDashArray="4,4" />
+                                        <Ellipse Canvas.Left="176.67" Canvas.Top="176.67" Width="146.67" Height="146.67" Stroke="#15818CF8" StrokeThickness="1" StrokeDashArray="4,4" />
                                         <!-- 85° Zenith Safety Limit -->
-                                        <Ellipse Canvas.Left="143.5" Canvas.Top="143.5" Width="13" Height="13" Stroke="#30EF4444" StrokeThickness="1.0" StrokeDashArray="2,2" />
+                                        <Ellipse Canvas.Left="237.78" Canvas.Top="237.78" Width="24.44" Height="24.44" Stroke="#30EF4444" StrokeThickness="1.0" StrokeDashArray="2,2" />
                                         <!-- Center (Zenith 90°) -->
-                                        <Ellipse Canvas.Left="148" Canvas.Top="148" Width="4" Height="4" Fill="#60818CF8" />
+                                        <Ellipse Canvas.Left="248" Canvas.Top="248" Width="4" Height="4" Fill="#60818CF8" />
 
                                         <!-- Altitude Labels -->
-                                        <TextBlock Text="30°" FontSize="8" Foreground="#50818CF8" Canvas.Left="152" Canvas.Top="72" />
-                                        <TextBlock Text="60°" FontSize="8" Foreground="#50818CF8" Canvas.Left="152" Canvas.Top="112" />
-                                        <TextBlock Text="85°" FontSize="8" Foreground="#50EF4444" Canvas.Left="152" Canvas.Top="136" />
+                                        <TextBlock Text="30°" FontSize="8" Foreground="#50818CF8" Canvas.Left="252" Canvas.Top="106" />
+                                        <TextBlock Text="60°" FontSize="8" Foreground="#50818CF8" Canvas.Left="252" Canvas.Top="179" />
+                                        <TextBlock Text="85°" FontSize="8" Foreground="#50EF4444" Canvas.Left="252" Canvas.Top="231" />
 
                                         <!-- Radial Azimuth lines -->
-                                        <Line X1="150" Y1="30" X2="150" Y2="270" Stroke="#15818CF8" StrokeThickness="1" />
-                                        <Line X1="30" Y1="150" X2="270" Y2="150" Stroke="#15818CF8" StrokeThickness="1" />
-                                        <Line X1="65" Y1="65" X2="235" Y2="235" Stroke="#08818CF8" StrokeThickness="1" StrokeDashArray="3,3" />
-                                        <Line X1="65" Y1="235" X2="235" Y2="65" Stroke="#08818CF8" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line X1="250" Y1="30" X2="250" Y2="470" Stroke="#15818CF8" StrokeThickness="1" />
+                                        <Line X1="30" Y1="250" X2="470" Y2="250" Stroke="#15818CF8" StrokeThickness="1" />
+                                        <Line X1="94.44" Y1="94.44" X2="405.56" Y2="405.56" Stroke="#08818CF8" StrokeThickness="1" StrokeDashArray="3,3" />
+                                        <Line X1="94.44" Y1="405.56" X2="405.56" Y2="94.44" Stroke="#08818CF8" StrokeThickness="1" StrokeDashArray="3,3" />
 
                                         <!-- Azimuth Cardinal Labels -->
-                                        <TextBlock Text="N / 0°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="135" Canvas.Top="12" />
-                                        <TextBlock Text="S / 180°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="130" Canvas.Top="275" />
-                                        <TextBlock Text="E / 90°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="275" Canvas.Top="142" />
-                                        <TextBlock Text="W / 270°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="-6" Canvas.Top="142" />
+                                        <TextBlock Text="N / 0°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="230" Canvas.Top="8" />
+                                        <TextBlock Text="S / 180°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="225" Canvas.Top="475" />
+                                        <TextBlock Text="E / 90°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="475" Canvas.Top="242" />
+                                        <TextBlock Text="W / 270°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="0" Canvas.Top="242" />
 
-                                        <TextBlock Text="45°" FontSize="8.5" Foreground="Gray" Canvas.Left="238" Canvas.Top="50" />
-                                        <TextBlock Text="135°" FontSize="8.5" Foreground="Gray" Canvas.Left="235" Canvas.Top="238" />
-                                        <TextBlock Text="225°" FontSize="8.5" Foreground="Gray" Canvas.Left="45" Canvas.Top="238" />
-                                        <TextBlock Text="315°" FontSize="8.5" Foreground="Gray" Canvas.Left="45" Canvas.Top="50" />
+                                        <TextBlock Text="45°" FontSize="8.5" Foreground="Gray" Canvas.Left="410" Canvas.Top="72" />
+                                        <TextBlock Text="135°" FontSize="8.5" Foreground="Gray" Canvas.Left="410" Canvas.Top="410" />
+                                        <TextBlock Text="225°" FontSize="8.5" Foreground="Gray" Canvas.Left="72" Canvas.Top="410" />
+                                        <TextBlock Text="315°" FontSize="8.5" Foreground="Gray" Canvas.Left="72" Canvas.Top="72" />
 
                                         <!-- 1a. Horizon Obstacle Shaded Zone -->
                                         <Polygon Points="{Binding RadarObstructionPoints}" Fill="#1E00F3FF" IsHitTestVisible="False" />
@@ -291,7 +447,7 @@
                                         <ItemsControl ItemsSource="{Binding HorizonNodes}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
-                                                    <Canvas Width="300" Height="300" IsHitTestVisible="False" />
+                                                    <Canvas Width="500" Height="500" IsHitTestVisible="False" />
                                                 </ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemContainerStyle>
@@ -359,7 +515,7 @@
                                         </Canvas>
                                     </Canvas>
                                 </Grid>
-                            </ScrollViewer>
+                            </Viewbox>
 
                             <!-- Shaded Legend Card in the Corner -->
                             <Border CornerRadius="4" Background="#1A1A22" BorderThickness="1" BorderBrush="#2D2D38" Padding="8,6" Margin="10" VerticalAlignment="Bottom" HorizontalAlignment="Left" Opacity="0.8">
@@ -599,6 +755,7 @@
                                                     <TextBlock Text="  Alt: " FontSize="11" Foreground="DarkGray" />
                                                     <TextBlock Text="{Binding ActiveNode.Altitude, StringFormat={}{0:F2}°}" FontSize="11" FontWeight="Bold" Foreground="#FF00F3FF" />
                                                 </StackPanel>
+                                                <Button Style="{StaticResource ActionBtnStyle}" Content="Delete Selected Node" Command="{Binding DeletePointCommand}" Height="24" Background="#EF4444" Margin="0,6,0,0" FontSize="10" ToolTip="Remove this node from active session" />
                                             </StackPanel>
                                             <TextBlock Grid.Column="1" Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0" />
                                         </Grid>
@@ -718,9 +875,13 @@
                                         <TextBlock Text="Horiz. Lock" Foreground="#818CF8" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
                                         <CheckBox IsChecked="{Binding HorizonLockEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" ToolTip="Iteratively slews to counter sidereal drift and land exactly on target (Micro-Jump).">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4" ToolTip="Iteratively slews to counter sidereal drift and land exactly on target (Micro-Jump).">
                                         <TextBlock Text="🎯 Exact Pos." Foreground="#34D399" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
                                         <CheckBox IsChecked="{Binding IsExactPositionEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" ToolTip="Superimposes the transparent Sky Dome Radar grid over the Live webcam feed.">
+                                        <TextBlock Text="📡 HUD Overlay" Foreground="#FFA07A" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                        <CheckBox IsChecked="{Binding IsRadarOverlayEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </WrapPanel>
 
