@@ -87,10 +87,13 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
                 // 1. Zenith Proximity Check
                 if (_settingsManager.EnableZenithSafety) {
                     if (currentAlt > 85.0) {
+                        bool newlyTriggered = !_isZenithSafetyAlert;
                         IsZenithSafetyAlert = true;
                         SafetyMessage = $"[SAFETY WARNING] Zenith safety lock active: Altitude is {currentAlt:F2}° (Limit: 85°). Slew blocked.";
-                        SafetyLockoutTriggered?.Invoke(this, "Zenith limit exceeded");
-                        TriggerEmergencyStop();
+                        if (newlyTriggered) {
+                            SafetyLockoutTriggered?.Invoke(this, "Zenith limit exceeded");
+                            TriggerEmergencyStop();
+                        }
                         return;
                     } else {
                         IsZenithSafetyAlert = false;
@@ -106,12 +109,15 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
                     double threshold = _settingsManager.SafetyThreshold;
 
                     if (angularDistance < threshold) {
+                        bool newlyTriggered = !_isSolarSafetyAlert;
                         IsSolarSafetyAlert = true;
 
                         if (_settingsManager.EnableSolarSafety) {
                             SafetyMessage = $"[SAFETY EXCLUSION] Solar Proximity Lock active! Mount points {angularDistance:F2}° from the Sun (Threshold: {threshold}°).";
-                            SafetyLockoutTriggered?.Invoke(this, "Solar proximity detected");
-                            TriggerEmergencyStop();
+                            if (newlyTriggered) {
+                                SafetyLockoutTriggered?.Invoke(this, "Solar proximity detected");
+                                TriggerEmergencyStop();
+                            }
                         } else {
                             SafetyMessage = $"⚠ SOLAR ZONE WARNING: Mount points {angularDistance:F2}° from the Sun. Safety Lockout is DISABLED.";
                         }

@@ -22,6 +22,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
         public ICommand UndoPinCommand { get; }
         public ICommand ClearPinsCommand { get; }
         public ICommand SaveHorizonCommand { get; }
+        public ICommand LoadHorizonCommand { get; }
         public ICommand DeletePointCommand { get; }
 
         public ICommand SlewCCWCommand { get; }
@@ -38,6 +39,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             UndoPinCommand = new RelayCommand(o => UndoPin());
             ClearPinsCommand = new RelayCommand(o => ClearPins());
             SaveHorizonCommand = new RelayCommand(o => SaveHorizon());
+            LoadHorizonCommand = new RelayCommand(o => LoadHorizon());
             DeletePointCommand = new RelayCommand(o => DeletePoint(), o => _vm.HasActiveNode);
 
             SlewCCWCommand = new RelayCommand(o => SlewCCW());
@@ -115,6 +117,80 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             } catch (Exception ex) {
                 _vm.Log($"[Error] Failed to save horizon: {ex.Message}");
                 global::NINA.Core.Utility.Notification.Notification.ShowError($"Failed to save horizon: {ex.Message}");
+            }
+        }
+
+        public void LoadHorizon() {
+            if (_vm.HorizonNodes.Count > 0) {
+                var result = System.Windows.MessageBox.Show(
+                    "Loading a new profile will clear your currently placed horizon pins. Do you want to continue?",
+                    "Clear Existing Horizon Pins?",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning
+                );
+                if (result != System.Windows.MessageBoxResult.Yes) {
+                    return;
+                }
+            }
+
+            var dialog = new OpenFileDialog {
+                Title = "Load N.I.N.A. Horizon Profile",
+                Filter = "N.I.N.A. Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                DefaultExt = ".hrzn"
+            };
+
+            if (dialog.ShowDialog() == true) {
+                try {
+                    var lines = File.ReadAllLines(dialog.FileName);
+                    var newNodes = new List<HorizonNode>();
+                    int lineCount = 0;
+
+                    foreach (var line in lines) {
+                        lineCount++;
+                        var trimmed = line.Trim();
+                        if (string.IsNullOrWhiteSpace(trimmed)) continue;
+
+                        var parts = trimmed.Split(new[] { ' ', '\t', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length >= 2) {
+                            if (double.TryParse(parts[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double az) &&
+                                double.TryParse(parts[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double alt)) {
+                                
+                                newNodes.Add(new HorizonNode(az, alt));
+                            } else {
+                                _vm.Log($"[Warning] Failed to parse line {lineCount} in horizon profile: '{line}'");
+                            }
+                        }
+                    }
+
+                    if (newNodes.Count == 0) {
+                        _vm.Log("[Error] Failed to load horizon: No valid coordinates found in file.");
+                        global::NINA.Core.Utility.Notification.Notification.ShowError("Failed to load horizon: No valid coordinates found in file.");
+                        return;
+                    }
+
+                    ClearPins(); // Clears nodes, active index, and history
+
+                    // NINA's .hrzn file contains items that are already sorted. 
+                    // To ensure robust UI representation, sort them by azimuth just in case
+                    newNodes = newNodes.OrderBy(n => n.Azimuth).ToList();
+
+                    foreach (var node in newNodes) {
+                        _vm.HorizonNodes.Add(node);
+                    }
+                    _vm.NodeCount = _vm.HorizonNodes.Count;
+
+                    var top = _vm.HorizonNodes.Last();
+                    _vm.LastNodeAlt = top.Altitude;
+                    _vm.LastNodeAz = top.Azimuth;
+                    _vm.LastNodeText = top.ToString();
+
+                    _vm.Log($"[Load] Successfully loaded {newNodes.Count} nodes from {Path.GetFileName(dialog.FileName)}");
+                    global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"Horizon profile loaded: {Path.GetFileName(dialog.FileName)}!");
+
+                } catch (Exception ex) {
+                    _vm.Log($"[Error] Failed to load horizon profile: {ex.Message}");
+                    global::NINA.Core.Utility.Notification.Notification.ShowError($"Failed to load horizon profile: {ex.Message}");
+                }
             }
         }
 

@@ -827,56 +827,38 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                     double azRad = CurrentAz * Math.PI / 180.0;
                     double latRad = lat * Math.PI / 180.0;
 
-                    // Check if pointing near the celestial pole (Home/starting position).
-                    // In this position, HA and q are not well-defined, and we want to preserve the baseline 
-                    // mechanical CameraRotationOffset without any dynamic counter-rotation or flip.
-                    bool isNearPole = false;
-                    if (lat >= 0.0) {
-                        // Northern Hemisphere Pole: Alt = Lat, Az = 0 or 360
-                        if (Math.Abs(CurrentAlt - lat) < 3.0 && (CurrentAz < 5.0 || CurrentAz > 355.0)) {
-                            isNearPole = true;
-                        }
-                    } else {
-                        // Southern Hemisphere Pole: Alt = -Lat, Az = 180
-                        if (Math.Abs(CurrentAlt - Math.Abs(lat)) < 3.0 && Math.Abs(CurrentAz - 180.0) < 5.0) {
-                            isNearPole = true;
-                        }
+                    // Hour Angle (HA) calculation
+                    // Used to determine whether the mount is pointing to the East or West of the meridian.
+                    // When pointing to the East (HA < 0), the GEM performs a meridian flip, rotating the telescope tube
+                    // and camera by 180 degrees relative to its West-pointing orientation.
+                    double yHA = -Math.Sin(azRad) * Math.Cos(altRad);
+                    double xHA = Math.Sin(altRad) * Math.Cos(latRad) - Math.Cos(altRad) * Math.Sin(latRad) * Math.Cos(azRad);
+                    double haDeg = Math.Atan2(yHA, xHA) * 180.0 / Math.PI;
+
+                    // Parallactic Angle (q) calculation
+                    // On a polar-aligned equatorial mount, the camera sensor stays aligned with the equatorial coordinate grid.
+                    // The field rotation angle of the local horizon relative to the camera sensor is exactly the Parallactic Angle (q).
+                    // Zenith is at angle q relative to the equatorial North direction on the sensor.
+                    double yQ = Math.Sin(azRad);
+                    double xQ = Math.Cos(altRad) * Math.Tan(latRad) - Math.Sin(altRad) * Math.Cos(azRad);
+                    double qDeg = Math.Atan2(yQ, xQ) * 180.0 / Math.PI;
+
+                    // Apply the counter-rotation to level the horizon.
+                    // We subtract qDeg to rotate the camera image counter-clockwise by qDeg to level the local horizontal plane.
+                    totalRotation -= qDeg;
+
+                    // If pointing East (HA < -0.1), apply a 180-degree flip to account for the GEM meridian flip.
+                    // A small dead-zone of 0.1 degrees around the meridian prevents crossing-jitter at the home position.
+                    if (haDeg < -0.1) {
+                        totalRotation += 180.0;
                     }
 
-                    if (isNearPole) {
-                        // At the Home position (Celestial Pole), the camera is physically clamped horizontal,
-                        // so the rotation is exactly the baseline CameraRotationOffset (defaulting to 0).
-                        totalRotation = CameraRotationOffset;
-                    } else {
-                        // Hour Angle (HA) calculation
-                        // Used to determine whether the mount is pointing to the East or West of the meridian.
-                        // When pointing to the East (HA < 0), the GEM performs a meridian flip, rotating the telescope tube
-                        // and camera by 180 degrees relative to its West-pointing orientation.
-                        double yHA = -Math.Sin(azRad) * Math.Cos(altRad);
-                        double xHA = Math.Sin(altRad) * Math.Cos(latRad) - Math.Cos(altRad) * Math.Sin(latRad) * Math.Cos(azRad);
-                        double haDeg = Math.Atan2(yHA, xHA) * 180.0 / Math.PI;
-
-                        // Parallactic Angle (q) calculation
-                        // On a polar-aligned equatorial mount, the camera sensor stays aligned with the equatorial coordinate grid.
-                        // The field rotation angle of the local horizon relative to the camera sensor is exactly the Parallactic Angle (q).
-                        // There is no additional roll from Hour Angle (HA) double-counted; the parallactic angle already completely
-                        // defines the orientation of Zenith (the local vertical) relative to equatorial North.
-                        double yQ = Math.Sin(azRad);
-                        double xQ = Math.Cos(altRad) * Math.Tan(latRad) - Math.Sin(altRad) * Math.Cos(azRad);
-                        double qDeg = Math.Atan2(yQ, xQ) * 180.0 / Math.PI;
-
-                        // Apply the counter-rotation to level the horizon.
-                        // We subtract 90 degrees here to compensate for the 90-degree Declination pitch shift between the pole
-                        // (Home position) and the horizon points. This ensures a baseline offset of 0 degrees remains perfectly 
-                        // horizontal throughout the entire run.
-                        totalRotation -= (qDeg + 90.0);
-
-                        // If pointing East (HA < -0.1), apply a 180-degree flip to account for the GEM meridian flip.
-                        // A small dead-zone of 0.1 degrees around the meridian prevents crossing-jitter at the home position.
-                        if (haDeg < -0.1) {
-                            totalRotation += 180.0;
-                        }
+                    // Normalize the angle to [-180, 180] degrees for robust UI rendering.
+                    totalRotation = (totalRotation + 180.0) % 360.0;
+                    if (totalRotation < 0.0) {
+                        totalRotation += 360.0;
                     }
+                    totalRotation -= 180.0;
                 } catch (Exception ex) {
                     Logger.Error($"[Horizon Studio] Rotation calculation failed: {ex.Message}");
                 }
@@ -914,6 +896,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public ICommand UndoPinCommand => _mappingCommands.UndoPinCommand;
         public ICommand ClearPinsCommand => _mappingCommands.ClearPinsCommand;
         public ICommand SaveHorizonCommand => _mappingCommands.SaveHorizonCommand;
+        public ICommand LoadHorizonCommand => _mappingCommands.LoadHorizonCommand;
         public ICommand DeletePointCommand => _mappingCommands.DeletePointCommand;
 
         public ICommand SlewCCWCommand => _mappingCommands.SlewCCWCommand;

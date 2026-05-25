@@ -697,8 +697,15 @@
                                 <Button Grid.Row="2" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Undo Last Pin" Command="{Binding UndoPinCommand}" Height="28" IsEnabled="{Binding IsRunning}" Background="#6B7280" Margin="0,0,4,6" FontSize="11" />
                                 <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Clear All Pins" Command="{Binding ClearPinsCommand}" Height="28" IsEnabled="{Binding IsRunning}" Background="#E11D48" Margin="4,0,0,6" FontSize="11" />
 
-                                <!-- Save Horizon Profile -->
-                                <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource ActionBtnStyle}" Content="Save Horizon Profile" Command="{Binding SaveHorizonCommand}" Height="34" Background="#F59E0B" Margin="0,0,0,0" ToolTip="Save the collected pins to a N.I.N.A. .hrzn file" />
+                                <!-- Save & Load Horizon Profile -->
+                                <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Save Horizon Profile" Command="{Binding SaveHorizonCommand}" Height="34" Background="#F59E0B" Margin="0,0,4,0" ToolTip="Save the collected pins to a N.I.N.A. .hrzn file" />
+                                    <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Load Horizon Profile" Command="{Binding LoadHorizonCommand}" Height="34" Background="#10B981" Margin="4,0,0,0" ToolTip="Load a N.I.N.A. .hrzn profile" />
+                                </Grid>
                             </Grid>
 
                             <!-- Row 3: Point Verification Panel -->
