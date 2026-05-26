@@ -89,6 +89,14 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         private HorizonNode _specialSyncNode = null;
         private bool _isSpecialSyncNodeSelected = false;
 
+        private bool _isMainCameraActive = false;
+        private int _detectedStarCount = 0;
+        private double _averageHFR = 0.0;
+        private double _averageADU = 0.0;
+        private CancellationTokenSource _mainCameraCTS = null;
+        private Task _mainCameraLoopTask = null;
+        private BinningMode _selectedBinning = null;
+
         internal static readonly Brush StatusIdleColor = CreateFrozenBrush("#72BDFF");
         internal static readonly Brush StatusWarningColor = CreateFrozenBrush("#FBBF24");
         internal static readonly Brush StatusSuccessColor = CreateFrozenBrush("#22C55E");
@@ -152,6 +160,10 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             StartWebcamCommand = new RelayCommand(async _ => await StartWebcamAsync(), _ => CanStartWebcam);
             StopWebcamCommand = new RelayCommand(_ => StopWebcam(), _ => CanStopWebcam);
             RefreshWebcamsCommand = new RelayCommand(_ => RefreshWebcams());
+
+            StartMainCameraCommand = new RelayCommand(async _ => await StartMainCameraAsync(), _ => CanStartMainCamera);
+            StopMainCameraCommand = new RelayCommand(_ => StopMainCamera(), _ => CanStopMainCamera);
+            SelectVisualFeedSourceCommand = new RelayCommand(p => VisualFeedSource = p?.ToString());
 
             StartCoAlignmentCommand = new RelayCommand(_ => StartCoAlignment());
             SaveCoAlignmentCommand = new RelayCommand(_ => SaveCoAlignment());
@@ -219,6 +231,17 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() => {
                 RaisePropertyChanged(nameof(IsCameraConnected));
                 RaisePropertyChanged(nameof(CanStart));
+                RaisePropertyChanged(nameof(AvailableBinningModes));
+                RaisePropertyChanged(nameof(HasMechanicalShutter));
+                RaisePropertyChanged(nameof(CanStartMainCamera));
+                RaisePropertyChanged(nameof(CanStopMainCamera));
+                
+                // Try to set SelectedBinning if a camera is connected
+                if (deviceInfo != null) {
+                    var savedBin = _settingsManager.Binning;
+                    SelectedBinning = AvailableBinningModes.FirstOrDefault(b => string.Equals(b.Name, savedBin, StringComparison.OrdinalIgnoreCase))
+                                      ?? AvailableBinningModes.FirstOrDefault();
+                }
             });
         }
 
@@ -364,10 +387,125 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             }
         }
 
-        public bool IsWebcamActive => CurrentWebcamState == WebcamState.Streaming;
+        public bool IsWebcamActive => (VisualFeedSource == "Webcam" && CurrentWebcamState == WebcamState.Streaming) ||
+                                      (VisualFeedSource == "MainCamera" && IsMainCameraActive);
 
-        public bool CanStartWebcam => SelectedWebcam != null && (CurrentWebcamState == WebcamState.Disconnected || CurrentWebcamState == WebcamState.Error);
-        public bool CanStopWebcam => CurrentWebcamState == WebcamState.Streaming || CurrentWebcamState == WebcamState.Connecting;
+        public bool CanStartWebcam => SelectedWebcam != null && (CurrentWebcamState == WebcamState.Disconnected || CurrentWebcamState == WebcamState.Error) && VisualFeedSource == "Webcam";
+        public bool CanStopWebcam => (CurrentWebcamState == WebcamState.Streaming || CurrentWebcamState == WebcamState.Connecting) && VisualFeedSource == "Webcam";
+
+        public string VisualFeedSource {
+            get => _settingsManager.VisualFeedSource;
+            set {
+                if (_settingsManager.VisualFeedSource != value) {
+                    _settingsManager.VisualFeedSource = value;
+                    RaisePropertyChanged(nameof(VisualFeedSource));
+                    RaisePropertyChanged(nameof(IsWebcamFeedSelected));
+                    RaisePropertyChanged(nameof(IsMainCameraFeedSelected));
+                    RaisePropertyChanged(nameof(IsWebcamActive));
+                    RaisePropertyChanged(nameof(CanStartWebcam));
+                    RaisePropertyChanged(nameof(CanStopWebcam));
+                    RaisePropertyChanged(nameof(CanStartMainCamera));
+                    RaisePropertyChanged(nameof(CanStopMainCamera));
+                    
+                    if (value == "MainCamera") {
+                        StopWebcam();
+                    } else {
+                        StopMainCamera();
+                    }
+                }
+            }
+        }
+
+        public bool IsWebcamFeedSelected => VisualFeedSource == "Webcam";
+        public bool IsMainCameraFeedSelected => VisualFeedSource == "MainCamera";
+
+        public bool IsMainCameraActive {
+            get => _isMainCameraActive;
+            private set {
+                if (_isMainCameraActive != value) {
+                    _isMainCameraActive = value;
+                    RaisePropertyChanged(nameof(IsMainCameraActive));
+                    RaisePropertyChanged(nameof(IsWebcamActive));
+                    RaisePropertyChanged(nameof(CanStartMainCamera));
+                    RaisePropertyChanged(nameof(CanStopMainCamera));
+                }
+            }
+        }
+
+        public bool IsAutoExposureEnabled {
+            get => _settingsManager.IsAutoExposureEnabled;
+            set {
+                if (_settingsManager.IsAutoExposureEnabled != value) {
+                    _settingsManager.IsAutoExposureEnabled = value;
+                    RaisePropertyChanged(nameof(IsAutoExposureEnabled));
+                }
+            }
+        }
+
+        public double TargetADU {
+            get => _settingsManager.TargetADU;
+            set {
+                if (_settingsManager.TargetADU != value) {
+                    _settingsManager.TargetADU = value;
+                    RaisePropertyChanged(nameof(TargetADU));
+                }
+            }
+        }
+
+        public int DetectedStarCount {
+            get => _detectedStarCount;
+            private set {
+                if (_detectedStarCount != value) {
+                    _detectedStarCount = value;
+                    RaisePropertyChanged(nameof(DetectedStarCount));
+                }
+            }
+        }
+
+        public double AverageHFR {
+            get => _averageHFR;
+            private set {
+                if (_averageHFR != value) {
+                    _averageHFR = value;
+                    RaisePropertyChanged(nameof(AverageHFR));
+                }
+            }
+        }
+
+        public double AverageADU {
+            get => _averageADU;
+            private set {
+                if (_averageADU != value) {
+                    _averageADU = value;
+                    RaisePropertyChanged(nameof(AverageADU));
+                }
+            }
+        }
+
+        public bool HasMechanicalShutter => _currentCameraInfo?.HasShutter ?? _cameraMediator?.GetInfo()?.HasShutter ?? false;
+
+        public IEnumerable<BinningMode> AvailableBinningModes =>
+            _currentCameraInfo?.BinningModes ?? _cameraMediator?.GetInfo()?.BinningModes ?? Enumerable.Empty<BinningMode>();
+
+        public BinningMode SelectedBinning {
+            get => _selectedBinning;
+            set {
+                if (_selectedBinning != value) {
+                    _selectedBinning = value;
+                    RaisePropertyChanged(nameof(SelectedBinning));
+                    if (value != null) {
+                        Binning = value.Name;
+                    }
+                }
+            }
+        }
+
+        public bool CanStartMainCamera => IsCameraConnected && !IsMainCameraActive && VisualFeedSource == "MainCamera";
+        public bool CanStopMainCamera => IsMainCameraActive && VisualFeedSource == "MainCamera";
+
+        public ICommand StartMainCameraCommand { get; }
+        public ICommand StopMainCameraCommand { get; }
+        public ICommand SelectVisualFeedSourceCommand { get; }
 
         public Brush WebcamStatusIndicatorColor {
             get {
@@ -1131,6 +1269,164 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             LastFrame = null;
         }
 
+        private async Task StartMainCameraAsync() {
+            if (!IsCameraConnected) {
+                Log("[Main Camera] Error: Primary camera not connected in N.I.N.A.");
+                return;
+            }
+            if (IsMainCameraActive) return;
+
+            Log("[Main Camera] Starting looping exposures...");
+            IsMainCameraActive = true;
+            _mainCameraCTS = new CancellationTokenSource();
+            _mainCameraLoopTask = Task.Run(async () => await CaptureMainCameraLoopAsync(_mainCameraCTS.Token), _mainCameraCTS.Token);
+            RaisePropertyChanged(nameof(CanStartMainCamera));
+            RaisePropertyChanged(nameof(CanStopMainCamera));
+        }
+
+        private void StopMainCamera() {
+            if (!IsMainCameraActive) return;
+            Log("[Main Camera] Stopping looping exposures...");
+            try {
+                _mainCameraCTS?.Cancel();
+            } catch { }
+
+            try {
+                _cameraMediator.AbortExposure();
+            } catch (Exception ex) {
+                Log($"[Main Camera] Warning: Failed to abort camera exposure: {ex.Message}");
+            }
+
+            IsMainCameraActive = false;
+            LastFrame = null;
+            SetStatus("Ready", StatusIdleColor);
+            RaisePropertyChanged(nameof(CanStartMainCamera));
+            RaisePropertyChanged(nameof(CanStopMainCamera));
+        }
+
+        private async Task CaptureMainCameraLoopAsync(CancellationToken token) {
+            try {
+                while (!token.IsCancellationRequested) {
+                    if (!IsCameraConnected) {
+                        Log("[Main Camera] Primary camera disconnected. Suspending loop.");
+                        SetStatus("Camera Disconnected", StatusWarningColor);
+                        await Task.Delay(2000, token);
+                        continue;
+                    }
+
+                    // Check if camera is free to capture
+                    if (!_cameraMediator.IsFreeToCapture(this)) {
+                        SetStatus("Waiting for Camera...", StatusWarningColor);
+                        await Task.Delay(1000, token);
+                        continue;
+                    }
+
+                    try {
+                        // Register capture block
+                        _cameraMediator.RegisterCaptureBlock(this);
+
+                        // Create capture sequence
+                        var currentBin = SelectedBinning ?? AvailableBinningModes.FirstOrDefault() ?? new BinningMode((short)1, (short)1);
+                        var sequence = new CaptureSequence {
+                            ExposureTime = ExposureTime,
+                            Gain = Gain,
+                            Binning = currentBin,
+                            ImageType = "LIGHT",
+                            Enabled = true
+                        };
+
+                        SetStatus("Exposing...", StatusProgressColor);
+                        
+                        // Capture image using N.I.N.A. imaging mediator
+                        var progress = new Progress<global::NINA.Core.Model.ApplicationStatus>();
+                        var exposureData = await _imagingMediator.CaptureImage(sequence, token, progress, "HorizonMapping");
+
+                        if (exposureData != null) {
+                            var imageData = await exposureData.ToImageData(progress, token);
+                            if (imageData != null) {
+                                // Calculate statistics (Mean ADU)
+                                var stats = await imageData.Statistics;
+                                if (stats != null) {
+                                    AverageADU = Math.Round(stats.Mean, 1);
+
+                                    // Apply Auto-Exposure adjustment
+                                    if (IsAutoExposureEnabled) {
+                                        double mean = stats.Mean;
+                                        double currentExp = sequence.ExposureTime;
+                                        double newExp = currentExp;
+
+                                        if (mean > 60000) {
+                                            newExp = currentExp / 5.0;
+                                        } else if (mean < 500) {
+                                            newExp = currentExp * 4.0;
+                                        } else {
+                                            newExp = currentExp * (TargetADU / mean);
+                                        }
+
+                                        double minExp = _currentCameraInfo?.ExposureMin ?? _cameraMediator?.GetInfo()?.ExposureMin ?? 0.001;
+                                        double maxExp = 5.0; // Daytime safety clamp
+                                        newExp = Math.Max(minExp, Math.Min(maxExp, newExp));
+
+                                        // Round to 3 decimal places
+                                        ExposureTime = Math.Round(newExp, 3);
+                                    }
+                                }
+
+                                // Render image for display
+                                var rendered = imageData.RenderImage();
+                                if (rendered != null) {
+                                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
+                                        LastFrame = rendered.Image;
+                                    }));
+
+                                    // Run star detection
+                                    try {
+                                        var updatedRendered = await rendered.DetectStars(false, global::NINA.Core.Enum.StarSensitivityEnum.Normal, global::NINA.Core.Enum.NoiseReductionEnum.Normal, token, null);
+                                        var analysis = updatedRendered?.RawImageData?.StarDetectionAnalysis;
+                                        if (analysis != null) {
+                                            DetectedStarCount = analysis.DetectedStars;
+                                            AverageHFR = Math.Round(analysis.HFR, 2);
+                                        }
+                                    } catch (Exception starEx) {
+                                        Logger.Debug($"[Horizon Studio] Star detection skipped/failed: {starEx.Message}");
+                                    }
+                                }
+                            }
+                        }
+                    } catch (OperationCanceledException) {
+                        break;
+                    } catch (Exception ex) {
+                        Log($"[Main Camera ERROR] Exposure failed: {ex.Message}");
+                        SetStatus("Exposure Error", StatusFailureColor);
+                        await Task.Delay(2000, token);
+                    } finally {
+                        try {
+                            _cameraMediator.ReleaseCaptureBlock(this);
+                        } catch { }
+                    }
+
+                    // Short delay between exposures to check for cancellation
+                    try {
+                        await Task.Delay(500, token);
+                    } catch (OperationCanceledException) {
+                        break;
+                    }
+                }
+            } finally {
+                try {
+                    _mainCameraCTS?.Dispose();
+                } catch { }
+                _mainCameraCTS = null;
+
+                System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                    IsMainCameraActive = false;
+                    SetStatus("Ready", StatusIdleColor);
+                    RaisePropertyChanged(nameof(CanStartMainCamera));
+                    RaisePropertyChanged(nameof(CanStopMainCamera));
+                });
+            }
+        }
+
         public void RefreshWebcams() {
             AvailableWebcams.Clear();
             var cameras = _webcamService.GetAvailableCameras();
@@ -1202,6 +1498,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             _safetyManager.SafetyLockoutTriggered -= SafetyManager_SafetyLockoutTriggered;
             _webcamService.StateChanged -= WebcamService_StateChanged;
 
+            try { StopMainCamera(); } catch { }
             try { _webcamService?.Dispose(); } catch { }
             try { _mappingCommands?.StopMapping(); } catch { }
             try { _statusTimer?.Stop(); } catch { }

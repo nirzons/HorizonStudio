@@ -140,8 +140,30 @@
                                     </StackPanel.Style>
                                     <Path Data="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4M4,6V18H20V6H4M11,7A3,3 0 0,1 14,10A3,3 0 0,1 11,13A3,3 0 0,1 8,10A3,3 0 0,1 11,7M18,8A1,1 0 0,1 19,9A1,1 0 0,1 18,10A1,1 0 0,1 17,9A1,1 0 0,1 18,8M5,16H19V17H5V16Z" 
                                           Fill="#3D3D45" Width="48" Height="48" HorizontalAlignment="Center" />
-                                    <TextBlock Text="UVC Webcam Live Stream" FontSize="13" FontWeight="Bold" Foreground="DarkGray" Margin="0,10,0,2" HorizontalAlignment="Center" />
-                                    <TextBlock Text="Active UVC webcam frames will display here." FontSize="10" Foreground="Gray" HorizontalAlignment="Center" />
+                                    <TextBlock FontSize="13" FontWeight="Bold" Foreground="DarkGray" Margin="0,10,0,2" HorizontalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="USB Webcam Live Stream" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMainCameraFeedSelected}" Value="True">
+                                                        <Setter Property="Text" Value="Main Astronomical Camera" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock FontSize="10" Foreground="Gray" HorizontalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="Active USB webcam frames will display here." />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMainCameraFeedSelected}" Value="True">
+                                                        <Setter Property="Text" Value="Click 'Start Exposure Feed' to begin capturing primary camera loops." />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </StackPanel>
                                 <!-- Symmetric Circular Eyepiece Webcam Display Container (Auto-scaling inside a Viewbox) -->
                                 <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -436,6 +458,37 @@
                                             </Grid>
                                         </Canvas>
                                     </Canvas>
+
+                                    <!-- Main Camera Star & ADU HUD Indicator (translucent dark fuchsia/blue pill) -->
+                                    <Border CornerRadius="12" Background="#DD0F0F12" BorderThickness="1.5" BorderBrush="#8B5CF6" Padding="12,6" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,35" IsHitTestVisible="False">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsMainCameraFeedSelected}" Value="True" />
+                                                            <Condition Binding="{Binding IsMainCameraActive}" Value="True" />
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </MultiDataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel Orientation="Horizontal">
+                                            <!-- Stars Badge -->
+                                            <TextBlock Text="✦ Stars: " FontSize="10" FontWeight="SemiBold" Foreground="DarkGray" />
+                                            <TextBlock Text="{Binding DetectedStarCount}" FontSize="10.5" FontWeight="Bold" Foreground="#F472B6" Margin="0,0,12,0" />
+                                            
+                                            <!-- HFR Badge -->
+                                            <TextBlock Text="⌀ HFR: " FontSize="10" FontWeight="SemiBold" Foreground="DarkGray" />
+                                            <TextBlock Text="{Binding AverageHFR, StringFormat={}{0:F2}px}" FontSize="10.5" FontWeight="Bold" Foreground="#60A5FA" Margin="0,0,12,0" />
+                                            
+                                            <!-- ADU Badge -->
+                                            <TextBlock Text="☀ ADU: " FontSize="10" FontWeight="SemiBold" Foreground="DarkGray" />
+                                            <TextBlock Text="{Binding AverageADU}" FontSize="10.5" FontWeight="Bold" Foreground="#34D399" />
+                                        </StackPanel>
+                                    </Border>
                                 </Grid>
                             </Viewbox>
                             </Grid>
@@ -641,13 +694,14 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" /> <!-- UVC Webcam Configuration (Row 0) -->
-                                <RowDefinition Height="Auto" /> <!-- Webcam Co-Alignment Assistant (Row 1) -->
-                                <RowDefinition Height="Auto" /> <!-- Main Active Mapping Controls (Row 2) -->
-                                <RowDefinition Height="Auto" /> <!-- Point Verification Panel (Row 3) -->
-                                <RowDefinition Height="Auto" /> <!-- Virtual Alt-Az Jogging Panel (Row 4) -->
-                                <RowDefinition Height="Auto" /> <!-- Hardware Parameters & Safety Checklist (Row 5) -->
-                                <RowDefinition Height="*" MinHeight="100" /> <!-- Console logs (Row 6) -->
+                                <RowDefinition Height="Auto" /> <!-- Visual Feed Selector (Row 0) -->
+                                <RowDefinition Height="Auto" /> <!-- UVC Webcam / Main Camera Configuration (Row 1) -->
+                                <RowDefinition Height="Auto" /> <!-- Webcam Co-Alignment Assistant (Row 2) -->
+                                <RowDefinition Height="Auto" /> <!-- Main Active Mapping Controls (Row 3) -->
+                                <RowDefinition Height="Auto" /> <!-- Point Verification Panel (Row 4) -->
+                                <RowDefinition Height="Auto" /> <!-- Virtual Alt-Az Jogging Panel (Row 5) -->
+                                <RowDefinition Height="Auto" /> <!-- Hardware Parameters & Safety Checklist (Row 6) -->
+                                <RowDefinition Height="*" MinHeight="100" /> <!-- Console logs (Row 7) -->
                             </Grid.RowDefinitions>
                             <Grid.Resources>
                                 <Style x:Key="ActionBtnStyle" TargetType="Button">
@@ -678,8 +732,90 @@
                                 </Style>
                             </Grid.Resources>
 
-                            <!-- Row 0: UVC Webcam Configuration -->
-                            <Border Grid.Row="0" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+                            <!-- Row 0: Visual Feed Source Selector -->
+                            <Border Grid.Row="0" CornerRadius="8" Background="#14141A" BorderThickness="1" BorderBrush="#2D2D35" Padding="4" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Webcam Selector Button -->
+                                    <Button Grid.Column="0" Content="📷 USB Webcam" Height="28" Margin="2" Cursor="Hand" BorderThickness="0"
+                                            Command="{Binding SelectVisualFeedSourceCommand}" CommandParameter="Webcam">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Setter Property="Foreground" Value="Gray" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="4">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsWebcamFeedSelected}" Value="True">
+                                                        <Setter Property="Background" Value="#3B82F6" />
+                                                        <Setter Property="Foreground" Value="White" />
+                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="0.85" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+
+                                    <!-- Main Camera Selector Button -->
+                                    <Button Grid.Column="1" Content="🔭 Main Camera" Height="28" Margin="2" Cursor="Hand" BorderThickness="0"
+                                            Command="{Binding SelectVisualFeedSourceCommand}" CommandParameter="MainCamera">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Setter Property="Foreground" Value="Gray" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="4">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMainCameraFeedSelected}" Value="True">
+                                                        <Setter Property="Background" Value="#3B82F6" />
+                                                        <Setter Property="Foreground" Value="White" />
+                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="0.85" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </Grid>
+                            </Border>
+
+                            <!-- Row 1: UVC Webcam Configuration (Webcam Mode) -->
+                            <Border Grid.Row="1" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsWebcamFeedSelected}" Value="False">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <StackPanel Orientation="Vertical">
                                     <!-- Webcam Header with Dot Status Indicator -->
                                     <Grid Margin="0,0,0,8">
@@ -726,8 +862,198 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Row 1: Webcam Co-Alignment Assistant -->
+                            <!-- Row 1: Main Camera Configuration (Main Camera Mode) -->
                             <Border Grid.Row="1" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsMainCameraFeedSelected}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Vertical">
+                                    <!-- Camera Header with Dot Status Indicator -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Main Camera Configuration" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" VerticalAlignment="Center" />
+                                        
+                                        <!-- Main Camera State Status Badge -->
+                                        <Border Grid.Column="1" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="6,2" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse Width="6" Height="6" Margin="0,0,5,0" VerticalAlignment="Center">
+                                                    <Ellipse.Style>
+                                                        <Style TargetType="Ellipse">
+                                                            <Setter Property="Fill" Value="#9E9E9E" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsMainCameraActive}" Value="True">
+                                                                    <Setter Property="Fill" Value="#22C55E" />
+                                                                </DataTrigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsCameraConnected}" Value="False" />
+                                                                        <Condition Binding="{Binding IsMainCameraActive}" Value="False" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Fill" Value="#EF4444" />
+                                                                </MultiDataTrigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsCameraConnected}" Value="True" />
+                                                                        <Condition Binding="{Binding IsMainCameraActive}" Value="False" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Fill" Value="#F59E0B" />
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="Idle" />
+                                                            <Setter Property="Foreground" Value="#F59E0B" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsMainCameraActive}" Value="True">
+                                                                    <Setter Property="Text" Value="Streaming" />
+                                                                    <Setter Property="Foreground" Value="#22C55E" />
+                                                                </DataTrigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsCameraConnected}" Value="False" />
+                                                                        <Condition Binding="{Binding IsMainCameraActive}" Value="False" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Text" Value="Disconnected" />
+                                                                    <Setter Property="Foreground" Value="#EF4444" />
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Shutter Safety Warning Banner -->
+                                    <Border CornerRadius="4" Background="#3D2A14" BorderThickness="1" BorderBrush="#F59E0B" Padding="8,6" Margin="0,0,0,8">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasMechanicalShutter}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="⚠" Foreground="#FBBF24" FontSize="12" FontWeight="Bold" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="MECHANICAL SHUTTER DETECTED - Continuous looping exposures may cause excessive shutter wear. Proceed with caution." Foreground="#FBBF24" FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Camera Parameters (Exposure, Gain, Binning) -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Exposure Time -->
+                                        <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                                            <TextBlock Text="Exposure (s)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                                            <TextBox Text="{Binding ExposureTime, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0">
+                                                <TextBox.Style>
+                                                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                        <Setter Property="IsEnabled" Value="True" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsAutoExposureEnabled}" Value="True">
+                                                                <Setter Property="IsEnabled" Value="False" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBox.Style>
+                                            </TextBox>
+                                        </StackPanel>
+
+                                        <!-- Gain -->
+                                        <StackPanel Grid.Column="1" Margin="4,0,4,0">
+                                            <TextBlock Text="Gain" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                                            <TextBox Text="{Binding Gain, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+                                        </StackPanel>
+
+                                        <!-- Binning Dropdown -->
+                                        <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                                            <TextBlock Text="Binning" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                                            <ComboBox ItemsSource="{Binding AvailableBinningModes}" SelectedItem="{Binding SelectedBinning}" Height="24" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" VerticalContentAlignment="Center">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Name}" Foreground="White" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Auto Exposure & Target ADU -->
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <TextBlock Text="Auto-Exposure" FontSize="10" Foreground="White" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                            <CheckBox IsChecked="{Binding IsAutoExposureEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsAutoExposureEnabled}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+                                            <TextBlock Text="Target ADU: " FontSize="10" Foreground="DarkGray" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                            <TextBox Text="{Binding TargetADU, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Start / Stop Exposure Actions -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Start Exposure Feed" Command="{Binding StartMainCameraCommand}" IsEnabled="{Binding CanStartMainCamera}" Height="28" Background="#6366F1" Margin="0,0,4,0" FontSize="11" />
+                                        <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Stop Exposure Feed" Command="{Binding StopMainCameraCommand}" IsEnabled="{Binding CanStopMainCamera}" Height="28" Background="#EF4444" Margin="4,0,0,0" FontSize="11" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Row 2: Webcam Co-Alignment Assistant -->
+                            <Border Grid.Row="2" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsWebcamFeedSelected}" Value="False">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <StackPanel Orientation="Vertical">
                                     <TextBlock Text="Webcam Co-Alignment Assistant" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
                                     
@@ -768,8 +1094,8 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Row 2: Main Active Mapping Controls -->
-                            <Grid Grid.Row="2" Margin="0,0,0,12">
+                            <!-- Row 3: Main Active Mapping Controls -->
+                            <Grid Grid.Row="3" Margin="0,0,0,12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -797,8 +1123,8 @@
                                 </Grid>
                             </Grid>
 
-                            <!-- Row 3: Point Verification Panel -->
-                            <Border Grid.Row="3" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+                            <!-- Row 4: Point Verification Panel -->
+                            <Border Grid.Row="4" CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
                                 <StackPanel Orientation="Vertical">
                                     <TextBlock Text="Point Verification (Slew Back)" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
                                     
@@ -1104,8 +1430,8 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Row 4: Virtual Alt-Az Jogging Panel (5x5 Grid) -->
-                            <StackPanel Grid.Row="4" Orientation="Vertical" Margin="0,0,0,12">
+                            <!-- Row 5: Virtual Alt-Az Jogging Panel (5x5 Grid) -->
+                            <StackPanel Grid.Row="5" Orientation="Vertical" Margin="0,0,0,12">
                                 <TextBlock Text="Virtual Alt-Az Jogging" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,6" />
                                 
                                 <Grid Width="180" Height="150" HorizontalAlignment="Center">
@@ -1169,8 +1495,8 @@
                                 </Button>
                             </StackPanel>
 
-                            <!-- Row 5: Hardware Parameters & Safety Checklist -->
-                            <Grid Grid.Row="5" Margin="0,0,0,8">
+                            <!-- Row 6: Hardware Parameters & Safety Checklist -->
+                            <Grid Grid.Row="6" Margin="0,0,0,8">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -1235,8 +1561,8 @@
                                 </StackPanel>
                             </Grid>
 
-                            <!-- Row 6: Log console feeds -->
-                            <Border Grid.Row="6" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,4,0,4">
+                            <!-- Row 7: Log console feeds -->
+                            <Border Grid.Row="7" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,4,0,4">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <StackPanel>
                                         <TextBlock Text="System Activity Logs" FontSize="9" FontWeight="Bold" Foreground="Gray" Margin="0,0,0,4" />

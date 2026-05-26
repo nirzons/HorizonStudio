@@ -39,6 +39,9 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
         private bool _isExactPositionEnabled = false;
         private int _verificationStepSize = 1;
         private bool _isRadarOverlayEnabled = false;
+        private string _visualFeedSource = "Webcam";
+        private bool _isAutoExposureEnabled = true;
+        private double _targetADU = 25000.0;
 
         public SettingsManager(IProfileService profileService) {
             _profileService = profileService;
@@ -174,6 +177,21 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
             set { if (_isRadarOverlayEnabled != value) { _isRadarOverlayEnabled = value; SaveSetting(nameof(IsRadarOverlayEnabled), value); OnPropertyChanged(); } }
         }
 
+        public string VisualFeedSource {
+            get => _visualFeedSource;
+            set { if (_visualFeedSource != value) { _visualFeedSource = value; SaveSetting(nameof(VisualFeedSource), value); OnPropertyChanged(); } }
+        }
+
+        public bool IsAutoExposureEnabled {
+            get => _isAutoExposureEnabled;
+            set { if (_isAutoExposureEnabled != value) { _isAutoExposureEnabled = value; SaveSetting(nameof(IsAutoExposureEnabled), value); OnPropertyChanged(); } }
+        }
+
+        public double TargetADU {
+            get => _targetADU;
+            set { if (_targetADU != value) { _targetADU = value; SaveSetting(nameof(TargetADU), value); OnPropertyChanged(); } }
+        }
+
 
         private void LoadSettings() {
             try {
@@ -200,6 +218,9 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
                 _isExactPositionEnabled = _accessor.GetValueBoolean(nameof(IsExactPositionEnabled), false);
                 _verificationStepSize = _accessor.GetValueInt32(nameof(VerificationStepSize), 1);
                 _isRadarOverlayEnabled = _accessor.GetValueBoolean(nameof(IsRadarOverlayEnabled), false);
+                _visualFeedSource = _accessor.GetValueString(nameof(VisualFeedSource), "Webcam");
+                _isAutoExposureEnabled = _accessor.GetValueBoolean(nameof(IsAutoExposureEnabled), true);
+                _targetADU = _accessor.GetValueDouble(nameof(TargetADU), 25000.0);
 
                 OnPropertyChanged(string.Empty);
             } catch (Exception ex) {

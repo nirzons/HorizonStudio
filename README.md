@@ -13,6 +13,12 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 * **AR HUD Overlay:** Superimposes a transparent Sky Dome Radar grid, card directions, the mapped horizon line, and mount position directly over the live camera feed.
 * **Click-to-Slew:** Double-click near the horizon overlay line on the video feed to automatically slew your mount to that position.
 
+### 📷 Main Camera Integration
+* **Live Main Camera Feed:** Use your primary imaging camera as the video source instead of (or alongside) a webcam, with full N.I.N.A. equipment integration via `IImagingMediator`.
+* **Auto-Exposure ADU Scaling:** Automatically adjusts exposure time to keep the image within an optimal ADU range, ensuring clear visibility in varying sky conditions.
+* **Real-Time Star Detection HUD:** A translucent eyepiece overlay displays live telemetry — star count, median HFR, and ADU level — so you can verify optical alignment at a glance.
+* **Camera Safety:** Implements hardware capture-block serialization and physical exposure aborts to prevent driver lockouts when stopping or switching feeds.
+
 ### 🔄 Webcam Co-Alignment & Rotation
 * **Co-Alignment Assistant:** Center a landmark in your main imaging telescope, click the same target in the webcam feed, and the plugin locks the optical offset.
 * **Equatorial Counter-Rotation:** Automatically rotates the camera feed in real-time based on your mount's position, keeping your physical horizon level. Handles meridian flips automatically.
