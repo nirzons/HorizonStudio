@@ -828,12 +828,23 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                     double latRad = lat * Math.PI / 180.0;
 
                     // Hour Angle (HA) calculation
-                    // Used to determine whether the mount is pointing to the East or West of the meridian.
-                    // When pointing to the East (HA < 0), the GEM performs a meridian flip, rotating the telescope tube
-                    // and camera by 180 degrees relative to its West-pointing orientation.
+                    // Used as a fallback to determine whether the mount is pointing to the East or West of the meridian.
                     double yHA = -Math.Sin(azRad) * Math.Cos(altRad);
                     double xHA = Math.Sin(altRad) * Math.Cos(latRad) - Math.Cos(altRad) * Math.Sin(latRad) * Math.Cos(azRad);
                     double haDeg = Math.Atan2(yHA, xHA) * 180.0 / Math.PI;
+
+                    // Determine if the mount is physically pointing East (requiring the 180° meridian flip correction).
+                    // We query the actual physical SideOfPier from the mount:
+                    // - PierWest (value 1) means the telescope is physically on the West side of the pier, pointing East.
+                    // - PierEast (value 0) means the telescope is physically on the East side of the pier, pointing West.
+                    bool isPointingEast = false;
+                    var side = _currentTelescopeInfo?.SideOfPier;
+                    if (side != null && !side.ToString().Contains("Unknown")) {
+                        isPointingEast = side.ToString().Contains("West");
+                    } else {
+                        // Fallback to mathematical Hour Angle if pier side is unknown or null.
+                        isPointingEast = (haDeg < -0.1);
+                    }
 
                     // Parallactic Angle (q) calculation
                     // On a polar-aligned equatorial mount, the camera sensor stays aligned with the equatorial coordinate grid.
@@ -847,9 +858,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                     // We subtract qDeg to rotate the camera image counter-clockwise by qDeg to level the local horizontal plane.
                     totalRotation -= qDeg;
 
-                    // If pointing East (HA < -0.1), apply a 180-degree flip to account for the GEM meridian flip.
-                    // A small dead-zone of 0.1 degrees around the meridian prevents crossing-jitter at the home position.
-                    if (haDeg < -0.1) {
+                    // Apply the 180-degree flip if physically pointing East.
+                    if (isPointingEast) {
                         totalRotation += 180.0;
                     }
 
