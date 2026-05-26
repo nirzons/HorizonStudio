@@ -1,103 +1,96 @@
 # Horizon Studio (for N.I.N.A.)
 
-**Horizon Studio** is the definitive, professional-grade tool for creating, editing, and calibrating local horizon profiles in Nighttime Imaging 'N' Astronomy (N.I.N.A.).
+**Horizon Studio** is a professional-grade tool for creating, editing, and calibrating local horizon profiles in Nighttime Imaging 'N' Astronomy (N.I.N.A.).
 
-Instead of guessing where trees, rooftops, or distant mountains intersect the night sky, Horizon Studio allows you to trace your actual, physical horizon using a live video feed, generating a native `.hrzn` file that prevents your telescope from slewing into obstacles.
+Instead of guessing where trees, rooftops, or distant mountains intersect the night sky, Horizon Studio allows you to trace your actual, physical horizon using a live video feed, generating a native `.hrzn` file that prevents your telescope from slewing into obstructions.
 
 ---
 
 ## ✨ Implemented Features
 
 ### 🎥 Live Eyepiece & HUD Overlay
-* **Circular Eyepiece Masking:** Applied a custom, symmetric circular Donut Mask over the live camera feed. This hides all tilted black margins of rotated video frames, creating a premium round telescope eyepiece look.
-* **Futuristic AR HUD Overlay:** Superimposes a semi-transparent Sky Dome Radar grid (grid lines, cardinal labels, mapped obstruction polygon, active reticle, and mount pointer) directly over the circular webcam feed.
-* **Aspect-Ratio-Aware Translation:** Translates and stretches the camera feed uniformly, scaling dynamically to N.I.N.A.'s dockable panel size.
-* **Dynamic Cursor & Click Mapping:** The mouse cursor changes to a Hand (👆) when hovering over clickable horizon regions. Clicking near the horizon line on the HUD immediately slews the mount to that Alt/Az position.
+* **Circular Eyepiece View:** Rotates and crops the live camera feed into a clean circular telescope eyepiece view, hiding tilted black borders during mount tracking.
+* **AR HUD Overlay:** Superimposes a transparent Sky Dome Radar grid, card directions, the mapped horizon line, and mount position directly over the live camera feed.
+* **Click-to-Slew:** Double-click near the horizon overlay line on the video feed to automatically slew your mount to that position.
 
-### 🔄 Co-Alignment & Equatorial Counter-Rotation
-* **Webcam Co-Alignment Assistant:** Features an interactive co-alignment assistant. When aligning, the HUD overlays and masks are temporarily hidden, presenting a full rectangular view. Center a landmark in your main telescope, click the same target on the webcam feed, and the plugin locks that offset.
-* **Precision Optical-Axis-Centered Rotation:** When counter-rotating, the grid is translated to shift the alignment landmark to the center, then rotated. This ensures the target landmark stays absolutely stationary during camera rotation.
-* **Equatorial Counter-Rotation:** Automatically calculates the continuous Parallactic Angle ($q$) from Altitude, Azimuth, and Latitude to rotate the webcam feed, keeping your physical horizon level in the feed.
-* **GEM Meridian Flip Tracking:** Fully tracks and compensates for German Equatorial Mount (GEM) meridian flips by monitoring `SideOfPier` (falling back to Hour Angle mathematical signs on older mounts) to apply the correct $180^\circ$ orientation shift, eliminating upside-down feeds.
+### 🔄 Webcam Co-Alignment & Rotation
+* **Co-Alignment Assistant:** Center a landmark in your main imaging telescope, click the same target in the webcam feed, and the plugin locks the optical offset.
+* **Equatorial Counter-Rotation:** Automatically rotates the camera feed in real-time based on your mount's position, keeping your physical horizon level. Handles meridian flips automatically.
 
 ### 🗺️ Interactive Sky Dome Radar
-* **Premium Shaded Obstruction Zone:** Renders a smooth, 360-point polar projection loop. Constructs a beautiful, hollow shaded obstruction zone filling the outer ring representing the blocked low-altitude sky while keeping the zenith dark.
-* **Live Sorting:** The `HorizonNodes` collection is kept sorted by Azimuth in real-time. Dropping a pin automatically inserts it at its mathematically correct index to prevent interpolation artifacts.
-* **Interactive Radar Click-to-Slew:** Clicking directly on the Sky Dome Radar projects your click to Alt/Az. If within $2.5^\circ$ of a saved node, it snaps to it; otherwise, it slews to the interpolated horizon altitude at that azimuth.
+* **Shaded Obstruction Zone:** Displays a smooth, shaded representation of your blocked low-altitude sky.
+* **Radar Slewing:** Click anywhere on the radar view to slew the mount to that sky position. Clicking near a saved node snaps selection to it.
 
-### 🕹️ Traversal, Verification & Safety Locks
-* **CW / CCW Traversal Controls:** Features circle-geometry aligned `◀ Slew CCW` (decreasing Azimuth) and `Slew CW ▶` (increasing Azimuth) buttons with automatic $360^\circ$ circular modulo wrapping.
-* **Intelligent Traverse Start:** Traversal automatically begins at the closest node to the mount's current Azimuth, stepping forward or backward to prevent stationary double-clicks.
-* **Direct UI Action Lock:** Integrates a synchronous local action lock (`IsActionSlewing`) that disables all jog buttons, traversal buttons, and homing commands on the UI thread when a slew is active, preventing driver collisions.
-* **Large Azimuth Slew Safeguard (> 45°):** Displays a confirmation dialog before executing a traversal slew larger than $45^\circ$, protecting your mount and cables from sudden large jumps.
-* **Safety Lockout Prevention:** The solar and zenith safety systems monitor safety status at a 1 Hz heartbeat. Lockouts are throttled so that emergency stops are only triggered once, preventing UI button lockout spam.
+### 🕹️ Verification & Traversal
+* **Traversal Controls:** Step through your saved horizon nodes clockwise (`Slew CW ▶`) or counter-clockwise (`◀ Slew CCW`) to physically verify that your mapping is accurate.
+* **Safety Safeguards:** Disables jogging and traversal controls during active slews, and prompts for confirmation before performing any large azimuth moves (> 45°).
 
-### 🛠️ Advanced Pin & Session Management
-* **Always-On Mapping Mode:** The redundant "Start/Stop Mapping" buttons have been completely removed. The plugin is in a running mapping state by default and is continuously active.
-* **Safe Action-Triggered Tracking Suspension:** Sidereal tracking is not disabled when the mount connects, protecting your imaging sessions. Tracking is only automatically suspended the moment you interact with mapping controls (jog, slew, or drop pin).
-* **Automatic Pin Selection:** Dropping a new horizon pin immediately highlights and selects it, displaying its Alt/Az coordinates in the options card.
-* **"Remove Current Pin" Command:** Replaced "Undo Last Pin" with a precise deletion system that deletes whichever node is currently selected on the map.
-* **Proximity Button Deactivation:** Automatically disables the "Drop Horizon Pin" button when the mount is positioned within $0.05^\circ$ of the active pin, preventing accidental double-drops. The button reactivates instantly as the mount moves.
-
-### 📂 Profile Import & Review (.hrzn)
-* **Load Horizon Profile:** Added a premium emerald-green load button in a clean two-column grid.
-* **Overwrite Protection:** Prompts with a confirmation dialog before loading if nodes are already present in the active map.
-* **Robust Parser:** Parses standard space, tab, or comma-separated Azimuth-Altitude coordinate pairs from N.I.N.A. `.hrzn` files, gracefully skipping malformed data and empty lines.
-* **Sorting & Radar Sync:** Automatically re-sorts imported points by Azimuth, immediately drawing the imported polygon onto the Sky Dome Radar.
-
----
-
-## 🔮 Future Features Roadmap
-
-### 4. Profile Synchronization (3D Tilt Correction)
-* **Goal:** Fix "shifted" profiles caused by tripod bumps, polar alignment changes, or optical co-alignment errors without needing to remap the entire sky.
-* **Concept:** 
-  1. Slew to a known landmark node.
-  2. Click **Prepare Sync**, then manually jog the mount until the physical landmark is perfectly centered in your eyepiece.
-  3. Click **Confirm Sync**. 
-  4. The plugin calculates the exact Alt/Az offset and mathematically warps the rest of the profile.
-* **Mathematics:**
-  * **Azimuth Correction:** Rotational offset: `Az_new = (Az_old + ΔAz) % 360`
-  * **Altitude Correction:** Mount tilt behaves like a tilted 3D plane, modeled via a cosine wave:
-    `Alt_new = Alt_old + (ΔAlt * cos(Az_old - Az_ref))`
-    *(Where `ΔAlt` is the altitude error at the sync point, and `Az_ref` is the azimuth of the sync point).*
-
-### 7. Main Camera Integration (Dawn / Daytime / Nighttime Mapping)
-* **Goal:** Allow users to use their primary astronomical camera to map the horizon instead of requiring a separate USB webcam.
-* **UI Additions:** A camera source toggle ("USB Webcam" vs "Main Camera") and a premium HUD star-count indicator.
-* **Daytime Auto-Exposure Algorithm:** Runs an automatic exposure/gain calculation loop (similar to N.I.N.A.'s Flat Wizard) to dynamically maintain a target ADU, keeping the daytime horizon silhouette crisp.
-* **Nighttime Star-Detection Indicator (Dark Horizon Mapping):**
-  * Bypasses the auto-exposure loop at night, using default camera/exposure settings to ensure stars are sufficiently exposed and visible.
-  * Uses N.I.N.A.'s internal HFR/star detection algorithm to monitor and display **Star Count** in the HUD/UI.
-  * **Horizon Detection Rule:** If the camera is pointed above the horizon, the star count will be high. The moment the telescope is slewed down and the field of view is obstructed by a local landmark (e.g. a tree or building), the star count will drop dramatically (e.g. near zero), allowing precise and automatic mapping of the horizon line even in complete darkness!
+### 🛠️ Horizon Pin Management
+* **Dynamic Pin Dropping:** Drop nodes at your mount's position to build the horizon profile in real-time. Pins are automatically kept sorted by Azimuth.
+* **Point Editing & Deletion:** Select any node to view its coordinates, slew to it, or delete it from the profile.
 
 ---
 
 ## 🛠️ Requirements
 * **N.I.N.A.** (Version 3.0 or higher)
 * An equatorial mount connected via ASCOM/Alpaca
-* A wide-angled DirectShow Webcam **OR** a connected ASCOM/native primary camera
+* A wide-angled DirectShow USB Webcam **OR** your main imaging camera
 
 ---
 
-## 🚀 Basic Workflow
+## 🚀 Step-by-Step User Guide
 
-### Creating a New Profile
-1. Connect your Mount and Camera in N.I.N.A.
-2. Open the Horizon Studio dockable tab.
-3. Co-align the on-screen targeting crosshair with your telescope's main optics.
-4. Use the on-screen jog controls to move your mount to the peak of an obstacle (e.g., the top of a tree).
-5. Click **Drop Pin** to record the Alt/Az coordinate. The pin is auto-selected, and the radar obstruction polygon updates in real-time.
-6. Move to the next obstacle and repeat.
-7. Click **Save Horizon Profile** to export your custom `.hrzn` file.
+### 1. Creating a New Horizon Profile
+1. Connect your Mount and Camera in N.I.N.A., then open the **Horizon Studio** tab.
+2. Align your camera crosshairs with your main telescope using the co-alignment helper.
+3. Use the jogging controls to move the mount to the peak of a local obstacle (e.g. a tree top or roof line).
+4. Click **Drop Pin** to save that horizon point.
+5. Move the mount to the next obstacle along the horizon and click **Drop Pin** again. Repeat until you have mapped your sky.
+6. Click **Save Horizon Profile** to save your `.hrzn` file.
 
-### Editing, Fixing, or Syncing Profiles
-You can continue refining your current mapping session, or click **Load Horizon Profile** to load a saved `.hrzn` file.
-* **Add & Delete Pins:** Delete inaccurate data points using **Remove Current Pin**, or drop new pins directly.
-* **Verify Points:** Use `◀ Slew CCW` and `Slew CW ▶` controls to automatically slew the mount to saved points and visually verify their accuracy.
-* **Sync Entire Profile:** If you bumped your tripod or adjusted your polar alignment, use the upcoming 3D Tilt Correction (Feature #4) to warp and correct the entire profile from a single synchronized point.
+---
+
+### 2. Loading & Editing Profiles
+* **Load Profile:** Click **Load Horizon Profile** to load a previously saved `.hrzn` file.
+* **Add/Modify Pins:** Slew to any area and click **Drop Pin** to add new nodes.
+* **Delete Pins:** Click a node on the radar to select it, then click **Delete Node** to remove it.
+* **Verify Coords:** Click `◀ Slew CCW` or `Slew CW ▶` to step through your mapped nodes, verifying that the telescope points clear of physical obstructions.
+
+---
+
+### 3. Warp & Align Profiles (3D Tilt Correction)
+If you bump your tripod, move your mount, or adjust your polar alignment, your saved horizon profile will appear slightly shifted or tilted in the sky. **3D Tilt Correction** allows you to warp and re-align the entire profile using a single reference point.
+
+Horizon Studio supports two synchronization methods: **Horizon Sync** and **Landmark Sync**.
+
+#### Method A: Horizon Sync (Using a Horizon Pin)
+Use this if you want to align your profile using a physical feature that is already part of your horizon line (e.g., a specific chimney or post).
+1. Select the pin on the radar that represents your physical landmark.
+2. Click **Slew** in the active details card to move your telescope to it.
+3. Click **Prepare Sync**.
+   * The panel will enter Sync Mode, showing a pulsing purple highlight ring around the target node on the radar.
+   * Jogging controls remain active, but pin drops and verification slews are locked for safety.
+4. Look at your camera feed. Manually jog the mount until the physical landmark is centered under the crosshairs.
+5. Once you jog the mount past the safety threshold ($0.05^\circ$), the **Confirm Sync** button becomes active.
+6. Click **Confirm Sync** and approve the warping pop-up. The entire horizon line shifts and warps to match your mount's new alignment.
+
+---
+
+#### Method B: Landmark Sync (Using a Special Landmark)
+Use this if you want to align using a highly striking reference landmark (like an antenna tip or tower peak) that sits above or below your actual horizon. To prevent N.I.N.A. from treating this landmark as an obstruction, Horizon Studio encodes the coordinates directly into the profile's filename instead of writing them into the `.hrzn` file.
+1. Slew the telescope and center the striking landmark under your camera crosshairs.
+2. On the **🔷 Special Sync Landmark** card, click **Set Mount as Landmark**. A fuchsia diamond 🔷 appears on the radar at those coordinates.
+3. Click **Save Horizon Profile**. The plugin appends the landmark data to the filename: `Profile_sync_Az124.50_Alt15.20.hrzn`.
+4. **Calibrating in a Future Session:**
+   * Click **Load Horizon Profile** and load your `Profile_sync_Az124.50_Alt15.20.hrzn` file. The fuchsia diamond 🔷 immediately appears on the radar.
+   * Click **Slew** on the landmark card to slew your telescope to the landmark.
+   * Click **🔷 Select Landmark** on the card (or click directly on the fuchsia diamond 🔷 on the radar) to select it.
+   * Click **Prepare Sync** on the details card.
+   * Jog the mount to center the physical landmark under your crosshairs.
+   * Click **Confirm Sync** once enabled to warp your horizon profile.
+   * Save your horizon profile to update the filename with your new calibrated landmark coordinates.
 
 ---
 
 ## 📝 License
-Copyright (c) Nir Zonshine. All rights reserved.
+This project is licensed under the MIT License.

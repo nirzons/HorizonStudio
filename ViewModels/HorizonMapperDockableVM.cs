@@ -84,6 +84,11 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         private bool _isCoAligning = false;
         private double _webcamImageRotationAngle = 0.0;
 
+        private HorizonNode _syncRefNode = null;
+        private bool _isSyncPreparing = false;
+        private HorizonNode _specialSyncNode = null;
+        private bool _isSpecialSyncNodeSelected = false;
+
         internal static readonly Brush StatusIdleColor = CreateFrozenBrush("#72BDFF");
         internal static readonly Brush StatusWarningColor = CreateFrozenBrush("#FBBF24");
         internal static readonly Brush StatusSuccessColor = CreateFrozenBrush("#22C55E");
@@ -243,7 +248,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public bool CanStart => false; // Start/Stop buttons removed, mapping is always running
         public bool CanDropPin {
             get {
-                if (!IsRunning || IsSlewing || IsActionSlewing || !IsMountConnected) {
+                if (!IsRunning || IsSlewing || IsActionSlewing || !IsMountConnected || IsSyncPreparing) {
                     return false;
                 }
                 var active = ActiveNode;
@@ -402,6 +407,13 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 RaisePropertyChanged(nameof(TelescopeRadarX));
                 RaisePropertyChanged(nameof(TelescopeRadarY));
                 RaisePropertyChanged(nameof(CanDropPin));
+                if (IsSyncPreparing) {
+                    RaisePropertyChanged(nameof(CanConfirmSync));
+                    RaisePropertyChanged(nameof(SyncInstructionText));
+                    System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() => {
+                        System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+                    }));
+                }
             }
         }
 
@@ -413,6 +425,13 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 RaisePropertyChanged(nameof(TelescopeRadarX));
                 RaisePropertyChanged(nameof(TelescopeRadarY));
                 RaisePropertyChanged(nameof(CanDropPin));
+                if (IsSyncPreparing) {
+                    RaisePropertyChanged(nameof(CanConfirmSync));
+                    RaisePropertyChanged(nameof(SyncInstructionText));
+                    System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() => {
+                        System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+                    }));
+                }
             }
         }
 
@@ -444,6 +463,74 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public Brush StatusIndicatorColor {
             get => _statusIndicatorColor;
             set { _statusIndicatorColor = value; RaisePropertyChanged(nameof(StatusIndicatorColor)); }
+        }
+
+        public HorizonNode SyncRefNode {
+            get => _syncRefNode;
+            set {
+                _syncRefNode = value;
+                RaisePropertyChanged(nameof(SyncRefNode));
+                RaisePropertyChanged(nameof(SyncInstructionText));
+            }
+        }
+
+        public bool IsSyncPreparing {
+            get => _isSyncPreparing;
+            set {
+                _isSyncPreparing = value;
+                RaisePropertyChanged(nameof(IsSyncPreparing));
+                RaisePropertyChanged(nameof(CanPrepareSync));
+                RaisePropertyChanged(nameof(CanConfirmSync));
+                RaisePropertyChanged(nameof(CanDropPin));
+                RaisePropertyChanged(nameof(CanVerifyPoints));
+            }
+        }
+
+        public HorizonNode SpecialSyncNode {
+            get => _specialSyncNode;
+            set {
+                _specialSyncNode = value;
+                if (_specialSyncNode == null) {
+                    _isSpecialSyncNodeSelected = false;
+                    RaisePropertyChanged(nameof(IsSpecialSyncNodeSelected));
+                }
+                RaisePropertyChanged(nameof(SpecialSyncNode));
+                RaisePropertyChanged(nameof(HasSpecialSyncNode));
+                RaisePropertyChanged(nameof(SpecialSyncNodeRadarX));
+                RaisePropertyChanged(nameof(SpecialSyncNodeRadarY));
+                RaisePropertyChanged(nameof(ActiveNode));
+                RaisePropertyChanged(nameof(HasActiveNode));
+                RaisePropertyChanged(nameof(CanPrepareSync));
+            }
+        }
+
+        public bool HasSpecialSyncNode => SpecialSyncNode != null;
+
+        public double SpecialSyncNodeRadarX => SpecialSyncNode?.RadarX ?? 250.0;
+        public double SpecialSyncNodeRadarY => SpecialSyncNode?.RadarY ?? 250.0;
+
+        public bool CanPrepareSync => HasActiveNode && !IsSyncPreparing && IsMountConnected;
+        
+        public bool CanConfirmSync {
+            get {
+                if (!IsSyncPreparing || !IsMountConnected || IsSlewing || IsActionSlewing || SyncRefNode == null) {
+                    return false;
+                }
+                // Check if mount has moved enough from the sync reference point (at least 0.05 degrees / 3 arcminutes)
+                double dist = GetAngularDistance(CurrentAz, CurrentAlt, SyncRefNode.Azimuth, SyncRefNode.Altitude);
+                return dist >= 0.05;
+            }
+        }
+
+        public string SyncInstructionText {
+            get {
+                if (SyncRefNode == null) return "⚠️ Sync Mode: Jog mount to center landmark in feed, then click Confirm.";
+                double dist = GetAngularDistance(CurrentAz, CurrentAlt, SyncRefNode.Azimuth, SyncRefNode.Altitude);
+                if (dist < 0.05) {
+                    return "⚠️ Sync Mode: Jog mount to center landmark in feed (Confirm will enable once mount has moved).";
+                }
+                return "⚠️ Sync Mode: Landmark centered in feed. Click Confirm Sync to warp profile.";
+            }
         }
 
         public bool IsCoAligning {
@@ -581,18 +668,46 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             set {
                 if (_activeNodeIndex != value) {
                     _activeNodeIndex = value;
+                    if (_activeNodeIndex >= 0) {
+                        _isSpecialSyncNodeSelected = false;
+                        RaisePropertyChanged(nameof(IsSpecialSyncNodeSelected));
+                    }
                     RaisePropertyChanged(nameof(ActiveNodeIndex));
                     RaisePropertyChanged(nameof(ActiveNode));
                     RaisePropertyChanged(nameof(ActiveNodeRadarX));
                     RaisePropertyChanged(nameof(ActiveNodeRadarY));
                     RaisePropertyChanged(nameof(HasActiveNode));
                     RaisePropertyChanged(nameof(CanDropPin));
+                    RaisePropertyChanged(nameof(CanPrepareSync));
+                }
+            }
+        }
+
+        public bool IsSpecialSyncNodeSelected {
+            get => _isSpecialSyncNodeSelected;
+            set {
+                if (_isSpecialSyncNodeSelected != value) {
+                    _isSpecialSyncNodeSelected = value;
+                    if (_isSpecialSyncNodeSelected) {
+                        _activeNodeIndex = -1;
+                        RaisePropertyChanged(nameof(ActiveNodeIndex));
+                    }
+                    RaisePropertyChanged(nameof(IsSpecialSyncNodeSelected));
+                    RaisePropertyChanged(nameof(ActiveNode));
+                    RaisePropertyChanged(nameof(ActiveNodeRadarX));
+                    RaisePropertyChanged(nameof(ActiveNodeRadarY));
+                    RaisePropertyChanged(nameof(HasActiveNode));
+                    RaisePropertyChanged(nameof(CanDropPin));
+                    RaisePropertyChanged(nameof(CanPrepareSync));
                 }
             }
         }
 
         public HorizonNode ActiveNode {
             get {
+                if (IsSpecialSyncNodeSelected) {
+                    return SpecialSyncNode;
+                }
                 if (ActiveNodeIndex >= 0 && ActiveNodeIndex < HorizonNodes.Count) {
                     return HorizonNodes[ActiveNodeIndex];
                 }
@@ -630,7 +745,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
         public List<int> VerificationStepSizes { get; } = new List<int> { 1, 2, 5, 10, 20, 50 };
 
-        public bool CanVerifyPoints => IsMountConnected && !IsSlewing && !IsActionSlewing && HorizonNodes.Count > 0;
+        public bool CanVerifyPoints => IsMountConnected && !IsSlewing && !IsActionSlewing && HorizonNodes.Count > 0 && !IsSyncPreparing;
 
         public bool CanJog => IsMountConnected && !IsSlewing && !IsActionSlewing;
 
@@ -808,9 +923,20 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             _mappingCommands.RadarClickSlew(x, y);
         }
 
-        public bool IsNearHorizon(double canvasX, double canvasY) {
-            if (HorizonNodes.Count == 0) return true;
+        private double GetAngularDistance(double az1, double alt1, double az2, double alt2) {
+            double rad = Math.PI / 180.0;
+            double rAz1 = az1 * rad;
+            double rAlt1 = alt1 * rad;
+            double rAz2 = az2 * rad;
+            double rAlt2 = alt2 * rad;
 
+            double cosTheta = Math.Sin(rAlt1) * Math.Sin(rAlt2) + Math.Cos(rAlt1) * Math.Cos(rAlt2) * Math.Cos(rAz1 - rAz2);
+            cosTheta = Math.Max(-1.0, Math.Min(1.0, cosTheta));
+
+            return Math.Acos(cosTheta) * 180.0 / Math.PI;
+        }
+
+        public bool IsNearHorizon(double canvasX, double canvasY) {
             double dx = canvasX - 250.0;
             double dy = 250.0 - canvasY;
             double r = Math.Sqrt(dx * dx + dy * dy);
@@ -822,6 +948,15 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             double altitude = 90.0 - (90.0 * r / 220.0);
             if (altitude < 0.0) altitude = 0.0;
             if (altitude > 90.0) altitude = 90.0;
+
+            if (SpecialSyncNode != null) {
+                double distToSpecial = GetAngularDistance(azimuth, altitude, SpecialSyncNode.Azimuth, SpecialSyncNode.Altitude);
+                if (distToSpecial < 2.5) {
+                    return true;
+                }
+            }
+
+            if (HorizonNodes.Count == 0) return true;
 
             double horizonAlt = GetInterpolatedAltitude(azimuth);
             return Math.Abs(altitude - horizonAlt) <= 5.0;
@@ -928,6 +1063,14 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public ICommand SaveHorizonCommand => _mappingCommands.SaveHorizonCommand;
         public ICommand LoadHorizonCommand => _mappingCommands.LoadHorizonCommand;
         public ICommand DeletePointCommand => _mappingCommands.DeletePointCommand;
+
+        public ICommand PrepareSyncCommand => _mappingCommands.PrepareSyncCommand;
+        public ICommand ConfirmSyncCommand => _mappingCommands.ConfirmSyncCommand;
+        public ICommand CancelSyncCommand => _mappingCommands.CancelSyncCommand;
+        public ICommand SetSpecialSyncNodeCommand => _mappingCommands.SetSpecialSyncNodeCommand;
+        public ICommand ClearSpecialSyncNodeCommand => _mappingCommands.ClearSpecialSyncNodeCommand;
+        public ICommand SlewToSpecialSyncNodeCommand => _mappingCommands.SlewToSpecialSyncNodeCommand;
+        public ICommand SelectSpecialSyncNodeCommand => _mappingCommands.SelectSpecialSyncNodeCommand;
 
         public ICommand SlewCCWCommand => _mappingCommands.SlewCCWCommand;
         public ICommand SlewCWCommand => _mappingCommands.SlewCWCommand;

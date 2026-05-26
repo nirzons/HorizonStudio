@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Threading;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Win32;
 using NINA.Equipment.Interfaces.Mediator;
@@ -28,6 +30,14 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
         public ICommand SlewCCWCommand { get; }
         public ICommand SlewCWCommand { get; }
 
+        public ICommand PrepareSyncCommand { get; }
+        public ICommand ConfirmSyncCommand { get; }
+        public ICommand CancelSyncCommand { get; }
+        public ICommand SetSpecialSyncNodeCommand { get; }
+        public ICommand ClearSpecialSyncNodeCommand { get; }
+        public ICommand SlewToSpecialSyncNodeCommand { get; }
+        public ICommand SelectSpecialSyncNodeCommand { get; }
+
         public MappingCommands(HorizonMapperDockableVM vm, ITelescopeMediator telescopeMediator, IProfileService profileService) {
             _vm = vm;
             _telescopeMediator = telescopeMediator;
@@ -44,6 +54,276 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             SlewCCWCommand = new RelayCommand(o => SlewCCW());
             SlewCWCommand = new RelayCommand(o => SlewCW());
+
+            PrepareSyncCommand = new RelayCommand(o => PrepareSync(), o => _vm.CanPrepareSync);
+            ConfirmSyncCommand = new RelayCommand(o => ConfirmSync(), o => _vm.CanConfirmSync);
+            CancelSyncCommand = new RelayCommand(o => CancelSync(), o => _vm.IsSyncPreparing);
+            SetSpecialSyncNodeCommand = new RelayCommand(o => SetSpecialSyncNode(), o => _vm.IsMountConnected);
+            ClearSpecialSyncNodeCommand = new RelayCommand(o => ClearSpecialSyncNode(), o => _vm.HasSpecialSyncNode);
+            SlewToSpecialSyncNodeCommand = new RelayCommand(o => SlewToSpecialSyncNode(), o => _vm.HasSpecialSyncNode && _vm.IsMountConnected && !_vm.IsSlewing && !_vm.IsActionSlewing);
+            SelectSpecialSyncNodeCommand = new RelayCommand(o => SelectSpecialSyncNode(), o => _vm.HasSpecialSyncNode && !_vm.IsSyncPreparing);
+        }
+
+        public void PrepareSync() {
+            if (!_vm.HasActiveNode) {
+                _vm.Log("[Error] Cannot prepare sync: No active node selected.");
+                return;
+            }
+            if (!_vm.IsMountConnected) {
+                _vm.Log("[Error] Cannot prepare sync: Mount is not connected.");
+                return;
+            }
+            _vm.SyncRefNode = _vm.ActiveNode;
+            _vm.IsSyncPreparing = true;
+            if (_vm.IsSpecialSyncNodeSelected) {
+                _vm.Log($"[Profile Sync] Prepared sync using Special Landmark (Alt: {_vm.SyncRefNode.Altitude:F2}°, Az: {_vm.SyncRefNode.Azimuth:F2}°) as reference. Jog the mount to center this landmark in the webcam view, then click Confirm Sync.");
+            } else {
+                _vm.Log($"[Profile Sync] Prepared sync using node {_vm.ActiveNodeIndex} (Alt: {_vm.SyncRefNode.Altitude:F2}°, Az: {_vm.SyncRefNode.Azimuth:F2}°) as reference. Jog the mount to center the physical landmark, then click Confirm Sync.");
+            }
+        }
+
+        public void SelectSpecialSyncNode() {
+            if (_vm.SpecialSyncNode == null) return;
+            _vm.IsSpecialSyncNodeSelected = true;
+            _vm.Log($"[Special Sync] Selected Special Sync Landmark - Alt: {_vm.SpecialSyncNode.Altitude:F2}°, Az: {_vm.SpecialSyncNode.Azimuth:F2}°");
+        }
+
+        public void CancelSync() {
+            _vm.SyncRefNode = null;
+            _vm.IsSyncPreparing = false;
+            _vm.Log("[Profile Sync] Profile sync cancelled.");
+        }
+
+        public void SetSpecialSyncNode() {
+            if (!_vm.IsMountConnected) {
+                _vm.Log("[Error] Cannot set special sync node: Mount is not connected.");
+                return;
+            }
+            double az = _vm.CurrentAz;
+            double alt = _vm.CurrentAlt;
+            _vm.SpecialSyncNode = new HorizonNode(az, alt);
+            _vm.Log($"[Special Sync] Set special sync landmark at Az: {az:F2}°, Alt: {alt:F2}°");
+        }
+
+        public void ClearSpecialSyncNode() {
+            _vm.SpecialSyncNode = null;
+            _vm.Log("[Special Sync] Cleared special sync landmark.");
+        }
+
+        public void SlewToSpecialSyncNode() {
+            if (_vm.SpecialSyncNode == null) return;
+            if (!_vm.IsMountConnected) {
+                _vm.Log("[Error] Slew blocked: Mount is not connected.");
+                return;
+            }
+            if (_telescopeMediator.GetInfo()?.Slewing == true || _vm.IsActionSlewing) {
+                _vm.Log("[Error] Slew blocked: Mount is currently slewing.");
+                return;
+            }
+
+            double targetAlt = _vm.SpecialSyncNode.Altitude;
+            double targetAz = _vm.SpecialSyncNode.Azimuth;
+
+            try {
+                if (_telescopeMediator.GetInfo()?.Connected == true) {
+                    _telescopeMediator.SetTrackingEnabled(false);
+                    _vm.Log("Sidereal tracking automatically suspended for special landmark slew.");
+                }
+            } catch (Exception ex) {
+                _vm.Log($"[Warning] Failed to auto-disable tracking: {ex.Message}");
+            }
+
+            _vm.LastRequestedAlt = targetAlt;
+            _vm.LastRequestedAz = targetAz;
+            _vm.IsActionSlewing = true;
+
+            System.Threading.Tasks.Task.Run(async () => {
+                try {
+                    _vm.Log($"[Special Slew] Slewing mount to landmark - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
+
+                    double lat = _telescopeMediator.GetInfo()?.SiteLatitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Latitude ?? 0.0;
+                    double lon = _telescopeMediator.GetInfo()?.SiteLongitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Longitude ?? 0.0;
+
+                    var topo = new global::NINA.Astrometry.TopocentricCoordinates(
+                        global::NINA.Astrometry.Angle.ByDegree(targetAz),
+                        global::NINA.Astrometry.Angle.ByDegree(targetAlt),
+                        global::NINA.Astrometry.Angle.ByDegree(lat),
+                        global::NINA.Astrometry.Angle.ByDegree(lon)
+                    );
+
+                    DateTime startTime = DateTime.UtcNow;
+                    await _telescopeMediator.SlewToCoordinatesAsync(topo, CancellationToken.None);
+                    DateTime endTime = DateTime.UtcNow;
+
+                    if (_vm.IsExactPositionEnabled) {
+                        double errorAlt = _vm.CurrentAlt - targetAlt;
+                        double errorAz = _vm.CurrentAz - targetAz;
+
+                        if (errorAz > 180.0) errorAz -= 360.0;
+                        if (errorAz < -180.0) errorAz += 360.0;
+
+                        if (Math.Abs(errorAlt) > 0.01 || Math.Abs(errorAz) > 0.01) {
+                            double slewSeconds = (endTime - startTime).TotalSeconds;
+                            if (slewSeconds < 1.0) slewSeconds = 1.0;
+
+                            double rateAlt = errorAlt / slewSeconds;
+                            double rateAz = errorAz / slewSeconds;
+
+                            double predictedAlt = targetAlt - (rateAlt * 8.0);
+                            double predictedAz = (targetAz - (rateAz * 8.0) + 360.0) % 360.0;
+
+                            _vm.Log($"[Exact Position] Drift error detected. Applied Predictive Lead. Initiating Micro-Jump...");
+
+                            var microTopo = new global::NINA.Astrometry.TopocentricCoordinates(
+                                global::NINA.Astrometry.Angle.ByDegree(predictedAz),
+                                global::NINA.Astrometry.Angle.ByDegree(predictedAlt),
+                                global::NINA.Astrometry.Angle.ByDegree(lat),
+                                global::NINA.Astrometry.Angle.ByDegree(lon)
+                            );
+
+                            await _telescopeMediator.SlewToCoordinatesAsync(microTopo, CancellationToken.None);
+                        }
+                    }
+
+                    _vm.Log("Slew to landmark completed.");
+                    _telescopeMediator.SetTrackingEnabled(false);
+                } catch (Exception ex) {
+                    _vm.Log($"[Error] Slew to landmark failed: {ex.Message}");
+                } finally {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                        _vm.IsActionSlewing = false;
+                    });
+                }
+            });
+        }
+
+        public void ConfirmSync() {
+            if (!_vm.IsSyncPreparing || _vm.SyncRefNode == null) {
+                _vm.Log("[Error] Cannot confirm sync: Sync is not prepared.");
+                return;
+            }
+            if (!_vm.IsMountConnected) {
+                _vm.Log("[Error] Cannot confirm sync: Mount is not connected.");
+                return;
+            }
+            if (_telescopeMediator.GetInfo()?.Slewing == true || _vm.IsActionSlewing) {
+                _vm.Log("[Error] Cannot confirm sync: Mount is currently slewing.");
+                return;
+            }
+
+            double syncRefAz = _vm.SyncRefNode.Azimuth;
+            double syncRefAlt = _vm.SyncRefNode.Altitude;
+            double currentAz = _vm.CurrentAz;
+            double currentAlt = _vm.CurrentAlt;
+
+            double deltaAz = currentAz - syncRefAz;
+            if (deltaAz > 180.0) deltaAz -= 360.0;
+            if (deltaAz < -180.0) deltaAz += 360.0;
+
+            double deltaAlt = currentAlt - syncRefAlt;
+
+            var result = System.Windows.MessageBox.Show(
+                $"Warning: This will shift and warp all {_vm.HorizonNodes.Count} points in the current profile using 3D Tilt Correction to correct for mount tilt or alignment errors.\n\n" +
+                $"Reference Node Original: Alt {syncRefAlt:F2}°, Az {syncRefAz:F2}°\n" +
+                $"Mount Current Position: Alt {currentAlt:F2}°, Az {currentAz:F2}°\n" +
+                $"Offset to Apply: ΔAlt = {deltaAlt:F3}°, ΔAz = {deltaAz:F3}°\n\n" +
+                "Are you sure you want to warp the entire profile?",
+                "Confirm Profile 3D Tilt Correction Sync",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning
+            );
+
+            if (result != System.Windows.MessageBoxResult.Yes) {
+                _vm.Log("[Profile Sync] Profile sync aborted by user.");
+                return;
+            }
+
+            try {
+                if (_vm.HorizonNodes.Count == 0) {
+                    if (_vm.SpecialSyncNode != null) {
+                        _vm.SpecialSyncNode = new HorizonNode(currentAz, currentAlt);
+                        _vm.Log($"[Profile Sync] Warped special sync landmark to Az: {currentAz:F2}°, Alt: {currentAlt:F2}° (No horizon points to warp).");
+                    }
+                    _vm.IsSyncPreparing = false;
+                    _vm.SyncRefNode = null;
+                    return;
+                }
+
+                var oldToNewMap = new Dictionary<HorizonNode, HorizonNode>();
+                var warpedList = new List<HorizonNode>();
+
+                foreach (var node in _vm.HorizonNodes) {
+                    double oldAz = node.Azimuth;
+                    double oldAlt = node.Altitude;
+
+                    double newAz = (oldAz + deltaAz) % 360.0;
+                    if (newAz < 0.0) newAz += 360.0;
+
+                    double newAlt = oldAlt + (deltaAlt * Math.Cos((oldAz - syncRefAz) * Math.PI / 180.0));
+                    newAlt = Math.Max(-90.0, Math.Min(90.0, newAlt));
+
+                    var newNode = new HorizonNode(newAz, newAlt);
+                    oldToNewMap[node] = newNode;
+                    warpedList.Add(newNode);
+                }
+
+                var sortedWarpedList = warpedList.OrderBy(n => n.Azimuth).ToList();
+
+                var historyList = _pinHistory.ToList();
+                historyList.Reverse();
+                _pinHistory.Clear();
+                foreach (var oldNode in historyList) {
+                    if (oldToNewMap.TryGetValue(oldNode, out var newNode)) {
+                        _pinHistory.Push(newNode);
+                    }
+                }
+
+                HorizonNode newSyncRefNode = null;
+                if (_vm.SyncRefNode == _vm.SpecialSyncNode) {
+                    _vm.SpecialSyncNode = new HorizonNode(currentAz, currentAlt);
+                } else {
+                    oldToNewMap.TryGetValue(_vm.SyncRefNode, out newSyncRefNode);
+                    if (_vm.SpecialSyncNode != null) {
+                        double oldAz = _vm.SpecialSyncNode.Azimuth;
+                        double oldAlt = _vm.SpecialSyncNode.Altitude;
+                        double newAz = (oldAz + deltaAz) % 360.0;
+                        if (newAz < 0.0) newAz += 360.0;
+                        double newAlt = oldAlt + (deltaAlt * Math.Cos((oldAz - syncRefAz) * Math.PI / 180.0));
+                        newAlt = Math.Max(-90.0, Math.Min(90.0, newAlt));
+                        _vm.SpecialSyncNode = new HorizonNode(newAz, newAlt);
+                    }
+                }
+
+                _vm.HorizonNodes.Clear();
+                foreach (var node in sortedWarpedList) {
+                    _vm.HorizonNodes.Add(node);
+                }
+
+                _vm.NodeCount = _vm.HorizonNodes.Count;
+
+                if (newSyncRefNode != null) {
+                    _vm.ActiveNodeIndex = sortedWarpedList.IndexOf(newSyncRefNode);
+                } else {
+                    _vm.ActiveNodeIndex = -1;
+                }
+
+                if (_pinHistory.Count > 0) {
+                    var top = _pinHistory.Peek();
+                    _vm.LastNodeAlt = top.Altitude;
+                    _vm.LastNodeAz = top.Azimuth;
+                    _vm.LastNodeText = top.ToString();
+                }
+
+                _vm.IsSyncPreparing = false;
+                _vm.SyncRefNode = null;
+
+                _vm.Log($"[Profile Sync] Profile successfully warped! Applied ΔAlt = {deltaAlt:F3}°, ΔAz = {deltaAz:F3}° across all {_vm.NodeCount} points using 3D cosine-tilt correction.");
+                global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"Profile successfully warped using 3D Tilt Correction!");
+
+            } catch (Exception ex) {
+                _vm.Log($"[Error] Failed to warp profile: {ex.Message}");
+                global::NINA.Core.Utility.Notification.Notification.ShowError($"Failed to warp profile: {ex.Message}");
+            }
         }
 
         public void SaveHorizon() {
@@ -94,11 +374,17 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 _vm.Log($"[Save] Writing {rawNodes.Count} pinned nodes (N.I.N.A. interpolates natively).");
 
                 // Step 3: Prompt user for save location
+                string suggestedName = $"CustomHorizon_{DateTime.Now:yyyyMMdd_HHmm}";
+                if (_vm.SpecialSyncNode != null) {
+                    suggestedName += $"_sync_Az{_vm.SpecialSyncNode.Azimuth:F2}_Alt{_vm.SpecialSyncNode.Altitude:F2}";
+                }
+                suggestedName += ".hrzn";
+
                 var dialog = new SaveFileDialog {
                     Title = "Save N.I.N.A. Horizon Profile",
                     Filter = "N.I.N.A. Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
                     DefaultExt = ".hrzn",
-                    FileName = $"CustomHorizon_{DateTime.Now:yyyyMMdd_HHmm}.hrzn"
+                    FileName = suggestedName
                 };
 
                 if (dialog.ShowDialog() == true) {
@@ -141,6 +427,21 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             if (dialog.ShowDialog() == true) {
                 try {
+                    string fileName = Path.GetFileName(dialog.FileName);
+                    var match = Regex.Match(fileName, @"_sync_Az(?<az>\d+(\.\d+)?)(_Alt|-Alt)(?<alt>[-]?\d+(\.\d+)?)", RegexOptions.IgnoreCase);
+                    if (!match.Success) {
+                        match = Regex.Match(fileName, @"_sync_(?<az>\d+(\.\d+)?)(_|-)(?<alt>[-]?\d+(\.\d+)?)", RegexOptions.IgnoreCase);
+                    }
+                    if (match.Success) {
+                        if (double.TryParse(match.Groups["az"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAz) &&
+                            double.TryParse(match.Groups["alt"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAlt)) {
+                            _vm.SpecialSyncNode = new HorizonNode(parsedAz, parsedAlt);
+                            _vm.Log($"[Load] Extracted special sync landmark from filename: Az {parsedAz:F2}°, Alt {parsedAlt:F2}°");
+                        }
+                    } else {
+                        _vm.SpecialSyncNode = null;
+                    }
+
                     var lines = File.ReadAllLines(dialog.FileName);
                     var newNodes = new List<HorizonNode>();
                     int lineCount = 0;
@@ -544,6 +845,13 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             var activeNode = _vm.ActiveNode;
             if (activeNode == null) return;
 
+            if (_vm.IsSpecialSyncNodeSelected) {
+                _vm.SpecialSyncNode = null;
+                _vm.IsSpecialSyncNodeSelected = false;
+                _vm.Log("[Special Sync] Cleared special sync landmark via Active Node card deletion.");
+                return;
+            }
+
             _vm.HorizonNodes.Remove(activeNode);
             
             // Also remove from _pinHistory if it's there
@@ -599,48 +907,64 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             if (altitude < 0.0) altitude = 0.0;
             if (altitude > 90.0) altitude = 90.0;
 
-            // Determine clicked altitude on the horizon line for snapping
-            double clickedAlt = _vm.HorizonNodes.Count > 0 ? _vm.GetInterpolatedAltitude(azimuth) : altitude;
-
-            // Enforce that the click must be near the horizon line (within 5.0 degrees in Altitude)
-            if (_vm.HorizonNodes.Count > 0) {
-                double altDiff = Math.Abs(altitude - clickedAlt);
-                if (altDiff > 5.0) {
-                    // Silent return to ignore clicks that are not near the horizon line
-                    return;
-                }
-            }
-
-            // Search for snap node within 2.5 degrees angular separation on the horizon line
-            int snappedIndex = -1;
-            for (int i = 0; i < _vm.HorizonNodes.Count; i++) {
-                var node = _vm.HorizonNodes[i];
-                double dist = GetAngularDistance(azimuth, clickedAlt, node.Azimuth, node.Altitude);
-                if (dist < 2.5) {
-                    snappedIndex = i;
-                    break;
+            // Check if we are snapping to the Special Sync Node (within 2.5 degrees)
+            bool snappedSpecial = false;
+            if (_vm.SpecialSyncNode != null) {
+                double distToSpecial = GetAngularDistance(azimuth, altitude, _vm.SpecialSyncNode.Azimuth, _vm.SpecialSyncNode.Altitude);
+                if (distToSpecial < 2.5) {
+                    snappedSpecial = true;
                 }
             }
 
             double targetAlt;
             double targetAz;
 
-            if (snappedIndex != -1) {
-                _vm.ActiveNodeIndex = snappedIndex;
-                var snappedNode = _vm.HorizonNodes[snappedIndex];
-                targetAlt = snappedNode.Altitude;
-                targetAz = snappedNode.Azimuth;
-                _vm.Log($"[Radar Click] Snapped to existing Horizon Node at index {snappedIndex} - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
+            if (snappedSpecial) {
+                _vm.IsSpecialSyncNodeSelected = true;
+                targetAlt = _vm.SpecialSyncNode.Altitude;
+                targetAz = _vm.SpecialSyncNode.Azimuth;
+                _vm.Log($"[Radar Click] Snapped to Special Sync Landmark - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
             } else {
-                _vm.ActiveNodeIndex = -1;
-                if (_vm.HorizonNodes.Count == 0) {
-                    targetAlt = _vm.CurrentAlt;
-                    _vm.Log($"[Radar Click] Clicked radar with 0 nodes. Maintaining current altitude - Alt: {targetAlt:F2}°, Az: {azimuth:F2}°");
-                } else {
-                    targetAlt = _vm.GetInterpolatedAltitude(azimuth);
-                    _vm.Log($"[Radar Click] Clicked unmapped area. Interpolating target - Alt: {targetAlt:F2}°, Az: {azimuth:F2}°");
+                // Determine clicked altitude on the horizon line for snapping
+                double clickedAlt = _vm.HorizonNodes.Count > 0 ? _vm.GetInterpolatedAltitude(azimuth) : altitude;
+
+                // Enforce that the click must be near the horizon line (within 5.0 degrees in Altitude)
+                if (_vm.HorizonNodes.Count > 0) {
+                    double altDiff = Math.Abs(altitude - clickedAlt);
+                    if (altDiff > 5.0) {
+                        // Silent return to ignore clicks that are not near the horizon line
+                        return;
+                    }
                 }
-                targetAz = azimuth;
+
+                // Search for snap node within 2.5 degrees angular separation on the horizon line
+                int snappedIndex = -1;
+                for (int i = 0; i < _vm.HorizonNodes.Count; i++) {
+                    var node = _vm.HorizonNodes[i];
+                    double dist = GetAngularDistance(azimuth, clickedAlt, node.Azimuth, node.Altitude);
+                    if (dist < 2.5) {
+                        snappedIndex = i;
+                        break;
+                    }
+                }
+
+                if (snappedIndex != -1) {
+                    _vm.ActiveNodeIndex = snappedIndex;
+                    var snappedNode = _vm.HorizonNodes[snappedIndex];
+                    targetAlt = snappedNode.Altitude;
+                    targetAz = snappedNode.Azimuth;
+                    _vm.Log($"[Radar Click] Snapped to existing Horizon Node at index {snappedIndex} - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
+                } else {
+                    _vm.ActiveNodeIndex = -1;
+                    if (_vm.HorizonNodes.Count == 0) {
+                        targetAlt = _vm.CurrentAlt;
+                        _vm.Log($"[Radar Click] Clicked radar with 0 nodes. Maintaining current altitude - Alt: {targetAlt:F2}°, Az: {azimuth:F2}°");
+                    } else {
+                        targetAlt = _vm.GetInterpolatedAltitude(azimuth);
+                        _vm.Log($"[Radar Click] Clicked unmapped area. Interpolating target - Alt: {targetAlt:F2}°, Az: {azimuth:F2}°");
+                    }
+                    targetAz = azimuth;
+                }
             }
 
             // Large Azimuth Slew Safeguard (> 45°)
