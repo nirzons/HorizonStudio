@@ -65,7 +65,7 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 ---
 
 ### 3. Warp & Align Profiles (3D Tilt Correction)
-If you bump your tripod, move your mount, or adjust your polar alignment, your saved horizon profile will appear slightly shifted or tilted in the sky. **3D Tilt Correction** allows you to warp and re-align the entire profile using a single reference point.
+The most common workflow is to build your horizon profile during the daytime — when you can clearly see trees, rooftops, and other obstructions — before your mount is polar-aligned. Once you perform polar alignment, the mount will inevitably shift, and your saved profile will no longer match the sky. **3D Tilt Correction** allows you to warp and re-align the entire profile using a single reference point. It is also useful if you have physically repositioned your mount since the profile was originally built; in that case, 3D Tilt Correction serves as a quick preliminary correction before fine-tuning individual nodes.
 
 Horizon Studio supports two synchronization methods: **Horizon Sync** and **Landmark Sync**.
 
