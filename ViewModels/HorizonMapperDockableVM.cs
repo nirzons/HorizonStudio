@@ -240,8 +240,25 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public bool IsMountConnected => (_currentTelescopeInfo?.Connected ?? _telescopeMediator?.GetInfo()?.Connected ?? false);
         public bool IsSlewing => (_currentTelescopeInfo?.Slewing ?? _telescopeMediator?.GetInfo()?.Slewing ?? false);
 
-        public bool CanStart => IsMountConnected && !IsRunning && Interlocked.CompareExchange(ref TaskExecutingFlag, 0, 0) == 0 && !IsActionSlewing;
-        public bool CanDropPin => IsRunning && !IsSlewing && !IsActionSlewing;
+        public bool CanStart => false; // Start/Stop buttons removed, mapping is always running
+        public bool CanDropPin {
+            get {
+                if (!IsRunning || IsSlewing || IsActionSlewing || !IsMountConnected) {
+                    return false;
+                }
+                var active = ActiveNode;
+                if (active == null) {
+                    return true;
+                }
+                
+                double dAlt = Math.Abs(CurrentAlt - active.Altitude);
+                double dAz = Math.Abs(CurrentAz - active.Azimuth) % 360.0;
+                if (dAz > 180.0) dAz = 360.0 - dAz;
+                
+                // Disable if mount is closer than 0.05 degrees in both axes to the active node
+                return (dAlt >= 0.05 || dAz >= 0.05);
+            }
+        }
 
         public double ExposureTime {
             get => _settingsManager.ExposureTime;
@@ -366,7 +383,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             }
         }
 
-        private bool _isRunning = false;
+        private bool _isRunning = true; // Always running
         public bool IsRunning {
             get => _isRunning;
             set {
@@ -384,6 +401,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 RaisePropertyChanged(nameof(CurrentAlt));
                 RaisePropertyChanged(nameof(TelescopeRadarX));
                 RaisePropertyChanged(nameof(TelescopeRadarY));
+                RaisePropertyChanged(nameof(CanDropPin));
             }
         }
 
@@ -394,6 +412,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 RaisePropertyChanged(nameof(CurrentAz));
                 RaisePropertyChanged(nameof(TelescopeRadarX));
                 RaisePropertyChanged(nameof(TelescopeRadarY));
+                RaisePropertyChanged(nameof(CanDropPin));
             }
         }
 
@@ -567,6 +586,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                     RaisePropertyChanged(nameof(ActiveNodeRadarX));
                     RaisePropertyChanged(nameof(ActiveNodeRadarY));
                     RaisePropertyChanged(nameof(HasActiveNode));
+                    RaisePropertyChanged(nameof(CanDropPin));
                 }
             }
         }

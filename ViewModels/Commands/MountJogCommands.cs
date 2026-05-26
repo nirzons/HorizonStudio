@@ -140,6 +140,16 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 return;
             }
 
+            // Auto-suspend tracking on action trigger
+            try {
+                if (_telescopeMediator.GetInfo()?.Connected == true) {
+                    _telescopeMediator.SetTrackingEnabled(false);
+                    _vm.Log("Sidereal tracking automatically suspended for mount jog.");
+                }
+            } catch (Exception ex) {
+                _vm.Log($"[Warning] Failed to auto-disable tracking: {ex.Message}");
+            }
+
             _vm.IsActionSlewing = true;
 
             Task.Run(async () => {

@@ -254,6 +254,16 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             double alt = _vm.CurrentAlt;
             double az = _vm.CurrentAz;
 
+            // Auto-suspend tracking on action trigger
+            try {
+                if (_telescopeMediator.GetInfo()?.Connected == true) {
+                    _telescopeMediator.SetTrackingEnabled(false);
+                    _vm.Log("Sidereal tracking automatically suspended for pin drop.");
+                }
+            } catch (Exception ex) {
+                _vm.Log($"[Warning] Failed to auto-disable tracking: {ex.Message}");
+            }
+
             var node = new HorizonNode(az, alt);
             
             // Live Sorting: Insert in Azimuth-sorted order
@@ -263,6 +273,9 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             }
             _vm.HorizonNodes.Insert(insertIndex, node);
             _pinHistory.Push(node);
+
+            // Auto-select the newly dropped pin
+            _vm.ActiveNodeIndex = insertIndex;
 
             _vm.LastNodeAlt = alt;
             _vm.LastNodeAz = az;
@@ -446,6 +459,16 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             double targetAlt = node.Altitude;
             double targetAz = node.Azimuth;
+
+            // Auto-suspend tracking on action trigger
+            try {
+                if (_telescopeMediator.GetInfo()?.Connected == true) {
+                    _telescopeMediator.SetTrackingEnabled(false);
+                    _vm.Log("Sidereal tracking automatically suspended for verification slew.");
+                }
+            } catch (Exception ex) {
+                _vm.Log($"[Warning] Failed to auto-disable tracking: {ex.Message}");
+            }
 
             // Update VM LastRequested Alt/Az so jogging is continuous
             _vm.LastRequestedAlt = targetAlt;
@@ -637,6 +660,16 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     _vm.Log($"[Radar Slew] Large click jump of {deltaAz:F1}° aborted by user.");
                     return;
                 }
+            }
+
+            // Auto-suspend tracking on action trigger
+            try {
+                if (_telescopeMediator.GetInfo()?.Connected == true) {
+                    _telescopeMediator.SetTrackingEnabled(false);
+                    _vm.Log("Sidereal tracking automatically suspended for radar slew.");
+                }
+            } catch (Exception ex) {
+                _vm.Log($"[Warning] Failed to auto-disable tracking: {ex.Message}");
             }
 
             // Perform Slew
