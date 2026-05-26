@@ -374,11 +374,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 _vm.Log($"[Save] Writing {rawNodes.Count} pinned nodes (N.I.N.A. interpolates natively).");
 
                 // Step 3: Prompt user for save location
-                string suggestedName = $"CustomHorizon_{DateTime.Now:yyyyMMdd_HHmm}";
-                if (_vm.SpecialSyncNode != null) {
-                    suggestedName += $"_sync_Az{_vm.SpecialSyncNode.Azimuth:F2}_Alt{_vm.SpecialSyncNode.Altitude:F2}";
-                }
-                suggestedName += ".hrzn";
+                string suggestedName = $"CustomHorizon_{DateTime.Now:yyyyMMdd_HHmm}.hrzn";
 
                 var dialog = new SaveFileDialog {
                     Title = "Save N.I.N.A. Horizon Profile",
@@ -388,14 +384,24 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 };
 
                 if (dialog.ShowDialog() == true) {
-                    // Write the file, normalizing azimuth back to [0, 360) for the output.
+                    // Build file content with optional metadata comment header.
+                    // N.I.N.A.'s native horizon parser skips lines starting with '#',
+                    // so we can safely embed our landmark coordinates as a comment.
+                    var fileLines = new List<string>();
+
+                    if (_vm.SpecialSyncNode != null) {
+                        fileLines.Add($"# HorizonStudio_Metadata: LandmarkAz={_vm.SpecialSyncNode.Azimuth.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}; LandmarkAlt={_vm.SpecialSyncNode.Altitude.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+                    fileLines.Add("# Az Alt");
+
+                    // Write coordinate lines, normalizing azimuth back to [0, 360) for the output.
                     // Values unwrapped beyond 360° (e.g., 365°) fold back to 5°, which is correct
                     // since the sort order is already guaranteed by the unwrap step above.
-                    var lines = rawNodes.Select(n => {
+                    foreach (var n in rawNodes) {
                         double normalizedAz = (n.Az % 360.0 + 360.0) % 360.0;
-                        return $"{normalizedAz:F4} {n.Alt:F4}";
-                    });
-                    File.WriteAllLines(dialog.FileName, lines);
+                        fileLines.Add($"{normalizedAz:F4} {n.Alt:F4}");
+                    }
+                    File.WriteAllLines(dialog.FileName, fileLines);
 
                     _vm.Log($"[Save] Successfully saved {rawNodes.Count} nodes to {dialog.FileName}");
                     global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"Horizon profile saved successfully to {Path.GetFileName(dialog.FileName)}!");
@@ -427,29 +433,50 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             if (dialog.ShowDialog() == true) {
                 try {
-                    string fileName = Path.GetFileName(dialog.FileName);
-                    var match = Regex.Match(fileName, @"_sync_Az(?<az>\d+(\.\d+)?)(_Alt|-Alt)(?<alt>[-]?\d+(\.\d+)?)", RegexOptions.IgnoreCase);
-                    if (!match.Success) {
-                        match = Regex.Match(fileName, @"_sync_(?<az>\d+(\.\d+)?)(_|-)(?<alt>[-]?\d+(\.\d+)?)", RegexOptions.IgnoreCase);
-                    }
-                    if (match.Success) {
-                        if (double.TryParse(match.Groups["az"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAz) &&
-                            double.TryParse(match.Groups["alt"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAlt)) {
-                            _vm.SpecialSyncNode = new HorizonNode(parsedAz, parsedAlt);
-                            _vm.Log($"[Load] Extracted special sync landmark from filename: Az {parsedAz:F2}°, Alt {parsedAlt:F2}°");
-                        }
-                    } else {
-                        _vm.SpecialSyncNode = null;
-                    }
-
                     var lines = File.ReadAllLines(dialog.FileName);
                     var newNodes = new List<HorizonNode>();
                     int lineCount = 0;
 
+                    // Parse landmark metadata from comment header (if present).
+                    // Also supports legacy filename-based encoding for backwards compatibility.
+                    _vm.SpecialSyncNode = null;
+                    foreach (var line in lines) {
+                        var trimmed = line.Trim();
+                        if (trimmed.StartsWith("# HorizonStudio_Metadata:")) {
+                            var metaMatch = Regex.Match(trimmed, @"LandmarkAz=(?<az>[\d.]+).*LandmarkAlt=(?<alt>[-]?[\d.]+)");
+                            if (metaMatch.Success &&
+                                double.TryParse(metaMatch.Groups["az"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAz) &&
+                                double.TryParse(metaMatch.Groups["alt"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAlt)) {
+                                _vm.SpecialSyncNode = new HorizonNode(parsedAz, parsedAlt);
+                                _vm.Log($"[Load] Extracted special sync landmark from file metadata: Az {parsedAz:F2}°, Alt {parsedAlt:F2}°");
+                            }
+                            break; // Metadata found, stop scanning comments
+                        }
+                        // Stop scanning once we hit a non-comment, non-empty line
+                        if (!string.IsNullOrWhiteSpace(trimmed) && !trimmed.StartsWith("#")) break;
+                    }
+
+                    // Legacy fallback: try extracting landmark from filename if not found in file content
+                    if (_vm.SpecialSyncNode == null) {
+                        string fileName = Path.GetFileName(dialog.FileName);
+                        var match = Regex.Match(fileName, @"_sync_Az(?<az>\d+(\.\d+)?)(_Alt|-Alt)(?<alt>[-]?\d+(\.\d+)?)", RegexOptions.IgnoreCase);
+                        if (!match.Success) {
+                            match = Regex.Match(fileName, @"_sync_(?<az>\d+(\.\d+)?)(_|-)(?<alt>[-]?\d+(\.\d+)?)", RegexOptions.IgnoreCase);
+                        }
+                        if (match.Success &&
+                            double.TryParse(match.Groups["az"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double legacyAz) &&
+                            double.TryParse(match.Groups["alt"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double legacyAlt)) {
+                            _vm.SpecialSyncNode = new HorizonNode(legacyAz, legacyAlt);
+                            _vm.Log($"[Load] Extracted special sync landmark from legacy filename: Az {legacyAz:F2}°, Alt {legacyAlt:F2}°");
+                        }
+                    }
+
+                    // Parse coordinate lines (skip comments and blank lines)
                     foreach (var line in lines) {
                         lineCount++;
                         var trimmed = line.Trim();
                         if (string.IsNullOrWhiteSpace(trimmed)) continue;
+                        if (trimmed.StartsWith("#")) continue; // Skip comment lines
 
                         var parts = trimmed.Split(new[] { ' ', '\t', ',' }, StringSplitOptions.RemoveEmptyEntries);
                         if (parts.Length >= 2) {

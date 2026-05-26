@@ -16,6 +16,7 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 ### 📷 Main Camera Integration
 * **Live Main Camera Feed:** Use your primary imaging camera as the video source instead of (or alongside) a webcam, with full N.I.N.A. equipment integration via `IImagingMediator`.
 * **Auto-Exposure ADU Scaling:** Automatically adjusts exposure time to keep the image within an optimal ADU range, ensuring clear visibility in varying sky conditions.
+  * ⚠️ *Note: If mapping during the day, ensure an appropriate filter (like H-alpha) or short base exposure is active to prevent sensor saturation.*
 * **Real-Time Star Detection HUD:** A translucent eyepiece overlay displays live telemetry — star count, median HFR, and ADU level — so you can verify optical alignment at a glance.
 * **Camera Safety:** Implements hardware capture-block serialization and physical exposure aborts to prevent driver lockouts when stopping or switching feeds.
 
@@ -40,7 +41,7 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 ## 🛠️ Requirements
 * **N.I.N.A.** (Version 3.0 or higher)
 * An equatorial mount connected via ASCOM/Alpaca
-* A wide-angled DirectShow USB Webcam **OR** your main imaging camera
+* A wide-angled DirectShow USB Webcam (Highly Recommended for macro spatial awareness and fast mapping) **OR** your main imaging camera (via N.I.N.A. integration)
 
 ---
 
@@ -53,6 +54,8 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 4. Click **Drop Pin** to save that horizon point.
 5. Move the mount to the next obstacle along the horizon and click **Drop Pin** again. Repeat until you have mapped your sky.
 6. Click **Save Horizon Profile** to save your `.hrzn` file.
+
+> 💡 **Pro-Tip:** The fastest way to build a profile is to map 3–4 macro "anchor points" around your sky first (e.g., major roof peaks or cardinal direction markers). Once those are dropped, click along the generated radar line to automatically slew nearby, and use the jogging controls to fine-tune the subtle dips and peaks.
 
 ---
 
@@ -83,18 +86,18 @@ Use this if you want to align your profile using a physical feature that is alre
 ---
 
 #### Method B: Landmark Sync (Using a Special Landmark)
-Use this if you want to align using a highly striking reference landmark (like an antenna tip or tower peak) that sits above or below your actual horizon. To prevent N.I.N.A. from treating this landmark as an obstruction, Horizon Studio encodes the coordinates directly into the profile's filename instead of writing them into the `.hrzn` file.
+Use this if you want to align using a highly striking reference landmark (like an antenna tip or tower peak) that sits above or below your actual horizon. To prevent N.I.N.A. from treating this landmark as an obstruction, Horizon Studio embeds the coordinates safely as hidden metadata comments directly inside the `.hrzn` file, keeping it 100% compatible with native N.I.N.A. settings.
 1. Slew the telescope and center the striking landmark under your camera crosshairs.
 2. On the **🔷 Special Sync Landmark** card, click **Set Mount as Landmark**. A fuchsia diamond 🔷 appears on the radar at those coordinates.
-3. Click **Save Horizon Profile**. The plugin appends the landmark data to the filename: `Profile_sync_Az124.50_Alt15.20.hrzn`.
+3. Click **Save Horizon Profile**. The plugin writes the landmark data to the top of the file as an internal comment header. (You can freely rename this file as you wish; the sync data will not be lost).
 4. **Calibrating in a Future Session:**
-   * Click **Load Horizon Profile** and load your `Profile_sync_Az124.50_Alt15.20.hrzn` file. The fuchsia diamond 🔷 immediately appears on the radar.
-   * Click **Slew** on the landmark card to slew your telescope to the landmark.
+   * Click **Load Horizon Profile** and load your file. The fuchsia diamond 🔷 immediately appears on the radar based on the file's internal metadata.
+   * Click **Slew** on the landmark card to automatically move your telescope to the landmark's saved position.
    * Click **🔷 Select Landmark** on the card (or click directly on the fuchsia diamond 🔷 on the radar) to select it.
    * Click **Prepare Sync** on the details card.
    * Jog the mount to center the physical landmark under your crosshairs.
-   * Click **Confirm Sync** once enabled to warp your horizon profile.
-   * Save your horizon profile to update the filename with your new calibrated landmark coordinates.
+   * Click **Confirm Sync** once enabled (the mount must be jogged past the 0.05° safety threshold) to warp your horizon profile.
+   * Save your horizon profile to update the internal metadata with your new calibrated landmark coordinates.
 
 ---
 
