@@ -1,0 +1,101 @@
+<UserControl
+    x:Class="NirZonshine.NINA.HorizonStudio.Views.JoggingCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:NirZonshine.NINA.HorizonStudio"
+    xmlns:views="clr-namespace:NirZonshine.NINA.HorizonStudio.Views">
+
+    <UserControl.Resources>
+        <Style x:Key="ActionBtnStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <Grid>
+                                <Border x:Name="glow" Background="White" Opacity="0" CornerRadius="6" />
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="glow" Property="Opacity" Value="0.15" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#353540" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Row 5: Virtual Alt-Az Jogging Panel (5x5 Grid) -->
+    <StackPanel Orientation="Vertical" Margin="0,0,0,12">
+        <TextBlock Text="Virtual Alt-Az Jogging" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,6" />
+        
+        <Grid Width="180" Height="150" HorizontalAlignment="Center">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Row 0: Double-Arrow Diagonals & North -->
+            <Button Grid.Row="0" Grid.Column="0" Content="↖↖" Command="{Binding DoubleJogNorthWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az-" FontSize="9" />
+            <Button Grid.Row="0" Grid.Column="1" Content="▲▲◀" Command="{Binding JogN2W1Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Up, Single Az Left" FontSize="9" />
+            <Button Grid.Row="0" Grid.Column="2" Content="▲▲" Command="{Binding DoubleJogNorthCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt+" FontSize="9" />
+            <Button Grid.Row="0" Grid.Column="3" Content="▲▲▶" Command="{Binding JogN2E1Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Up, Single Az Right" FontSize="9" />
+            <Button Grid.Row="0" Grid.Column="4" Content="↗↗" Command="{Binding DoubleJogNorthEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt+, Az+" FontSize="9" />
+
+            <!-- Row 1: Single-Arrow Diagonals & North -->
+            <Button Grid.Row="1" Grid.Column="0" Content="▼◀◀" Command="{Binding JogN1W2Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Up, Double Az Left" FontSize="9" />
+            <Button Grid.Row="1" Grid.Column="1" Content="↖" Command="{Binding JogNorthWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az-" />
+            <Button Grid.Row="1" Grid.Column="2" Content="▲" Command="{Binding JogNorthCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt+" />
+            <Button Grid.Row="1" Grid.Column="3" Content="↗" Command="{Binding JogNorthEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az+" />
+            <Button Grid.Row="1" Grid.Column="4" Content="▼▶▶" Command="{Binding JogN1E2Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Up, Double Az Right" FontSize="9" />
+
+            <!-- Row 2: Double/Single West, Home, Single/Double East -->
+            <Button Grid.Row="2" Grid.Column="0" Content="◀◀" Command="{Binding DoubleJogWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az-" FontSize="9" />
+            <Button Grid.Row="2" Grid.Column="1" Content="◀" Command="{Binding JogWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az-" />
+            <Button Grid.Row="2" Grid.Column="2" Content="⌂" Command="{Binding HomeMountCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2563EB" ToolTip="Home Mount" FontSize="14" />
+            <Button Grid.Row="2" Grid.Column="3" Content="▶" Command="{Binding JogEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az+" />
+            <Button Grid.Row="2" Grid.Column="4" Content="▶▶" Command="{Binding DoubleJogEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Az+" FontSize="9" />
+
+            <!-- Row 3: Single-Arrow Diagonals & South -->
+            <Button Grid.Row="3" Grid.Column="0" Content="▲◀◀" Command="{Binding JogS1W2Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Down, Double Az Left" FontSize="9" />
+            <Button Grid.Row="3" Grid.Column="1" Content="↙" Command="{Binding JogSouthWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az-" />
+            <Button Grid.Row="3" Grid.Column="2" Content="▼" Command="{Binding JogSouthCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt-" />
+            <Button Grid.Row="3" Grid.Column="3" Content="↘" Command="{Binding JogSouthEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az+" />
+            <Button Grid.Row="3" Grid.Column="4" Content="▲▶▶" Command="{Binding JogS1E2Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Single Alt Down, Double Az Right" FontSize="9" />
+
+            <!-- Row 4: Double-Arrow Diagonals & South -->
+            <Button Grid.Row="4" Grid.Column="0" Content="↙↙" Command="{Binding DoubleJogSouthWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az-" FontSize="9" />
+            <Button Grid.Row="4" Grid.Column="1" Content="▼▼◀" Command="{Binding JogS2W1Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Down, Single Az Left" FontSize="9" />
+            <Button Grid.Row="4" Grid.Column="2" Content="▼▼" Command="{Binding DoubleJogSouthCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Double Alt-" FontSize="9" />
+            <Button Grid.Row="4" Grid.Column="3" Content="▼▼▶" Command="{Binding JogS2E1Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt Down, Single Az Right" FontSize="9" />
+            <Button Grid.Row="4" Grid.Column="4" Content="↘↘" Command="{Binding DoubleJogSouthEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Double Alt-, Az+" FontSize="9" />
+        </Grid>
+
+        <!-- Emergency Stop Button -->
+        <Button Command="{Binding StopMountCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#EF4444" Height="28" Margin="0,8,0,0" ToolTip="EMERGENCY JOG SLEW STOP">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="🛑" Margin="0,0,6,0" VerticalAlignment="Center" />
+                <TextBlock Text="EMERGENCY STOP" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
+            </StackPanel>
+        </Button>
+    </StackPanel>
+</UserControl>

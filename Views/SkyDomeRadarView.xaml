@@ -1,0 +1,206 @@
+<UserControl
+    x:Class="NirZonshine.NINA.HorizonStudio.Views.SkyDomeRadarView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:NirZonshine.NINA.HorizonStudio"
+    xmlns:views="clr-namespace:NirZonshine.NINA.HorizonStudio.Views">
+
+    <Grid Background="#0c0c0e" MinWidth="320" MinHeight="320">
+        <!-- Sky Dome Radar Canvas Container (Auto-scaling inside a Viewbox) -->
+        <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10">
+            <Grid Width="540" Height="540">
+                <!-- Radial Sky Grid Canvas -->
+                <Canvas Width="500" Height="500" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False" MouseLeftButtonDown="RadarCanvas_MouseLeftButtonDown" MouseMove="RadarCanvas_MouseMove" Cursor="Hand">
+                    <!-- Concentric Grid Circles -->
+                    <!-- Horizon (0°) -->
+                    <Ellipse Canvas.Left="30" Canvas.Top="30" Width="440" Height="440" Stroke="#30818CF8" StrokeThickness="1.5" />
+                    <!-- 30° Altitude -->
+                    <Ellipse Canvas.Left="103.33" Canvas.Top="103.33" Width="293.33" Height="293.33" Stroke="#15818CF8" StrokeThickness="1" StrokeDashArray="4,4" />
+                    <!-- 60° Altitude -->
+                    <Ellipse Canvas.Left="176.67" Canvas.Top="176.67" Width="146.67" Height="146.67" Stroke="#15818CF8" StrokeThickness="1" StrokeDashArray="4,4" />
+                    <!-- 85° Zenith Safety Limit -->
+                    <Ellipse Canvas.Left="237.78" Canvas.Top="237.78" Width="24.44" Height="24.44" Stroke="#30EF4444" StrokeThickness="1.0" StrokeDashArray="2,2" />
+                    <!-- Center (Zenith 90°) -->
+                    <Ellipse Canvas.Left="248" Canvas.Top="248" Width="4" Height="4" Fill="#60818CF8" />
+
+                    <!-- Altitude Labels -->
+                    <TextBlock Text="30°" FontSize="8" Foreground="#50818CF8" Canvas.Left="252" Canvas.Top="106" />
+                    <TextBlock Text="60°" FontSize="8" Foreground="#50818CF8" Canvas.Left="252" Canvas.Top="179" />
+                    <TextBlock Text="85°" FontSize="8" Foreground="#50EF4444" Canvas.Left="252" Canvas.Top="231" />
+
+                    <!-- Radial Azimuth lines -->
+                    <Line X1="250" Y1="30" X2="250" Y2="470" Stroke="#15818CF8" StrokeThickness="1" />
+                    <Line X1="30" Y1="250" X2="470" Y2="250" Stroke="#15818CF8" StrokeThickness="1" />
+                    <Line X1="94.44" Y1="94.44" X2="405.56" Y2="405.56" Stroke="#08818CF8" StrokeThickness="1" StrokeDashArray="3,3" />
+                    <Line X1="94.44" Y1="405.56" X2="405.56" Y2="94.44" Stroke="#08818CF8" StrokeThickness="1" StrokeDashArray="3,3" />
+
+                    <!-- Azimuth Cardinal Labels -->
+                    <TextBlock Text="N / 0°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="230" Canvas.Top="8" />
+                    <TextBlock Text="S / 180°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="225" Canvas.Top="475" />
+                    <TextBlock Text="E / 90°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="475" Canvas.Top="242" />
+                    <TextBlock Text="W / 270°" FontSize="9.5" FontWeight="Bold" Foreground="#FFF59E0B" Canvas.Left="0" Canvas.Top="242" />
+
+                    <TextBlock Text="45°" FontSize="8.5" Foreground="Gray" Canvas.Left="410" Canvas.Top="72" />
+                    <TextBlock Text="135°" FontSize="8.5" Foreground="Gray" Canvas.Left="410" Canvas.Top="410" />
+                    <TextBlock Text="225°" FontSize="8.5" Foreground="Gray" Canvas.Left="72" Canvas.Top="410" />
+                    <TextBlock Text="315°" FontSize="8.5" Foreground="Gray" Canvas.Left="72" Canvas.Top="72" />
+
+                    <!-- 1a. Horizon Obstacle Shaded Zone -->
+                    <Polygon Points="{Binding RadarObstructionPoints}" Fill="#1E00F3FF" IsHitTestVisible="False" />
+
+                    <!-- 1b. Horizon Obstacle Trace Line -->
+                    <Polyline Points="{Binding RadarHorizonPoints}" Stroke="#FF00F3FF" StrokeThickness="2.5" StrokeLineJoin="Round" Opacity="0.85" />
+
+                    <!-- 2. Interactive Dropped Pins Nodes -->
+                    <ItemsControl ItemsSource="{Binding Parent.HorizonNodes}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas Width="500" Height="500" IsHitTestVisible="False" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding RadarX}" />
+                                <Setter Property="Canvas.Top" Value="{Binding RadarY}" />
+                                <Setter Property="Margin" Value="-4,-4,0,0" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Ellipse Width="8" Height="8" Fill="#FFF59E0B" Stroke="#FF0c0c0e" StrokeThickness="1.5" ToolTip="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 3. Dynamic Mount Slew Crosshair -->
+                    <Canvas IsHitTestVisible="False">
+                        <Canvas.Style>
+                            <Style TargetType="Canvas">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Parent.IsMountConnected}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Canvas.Style>
+                        <Grid Width="24" Height="24" Margin="-12,-12,0,0">
+                            <Canvas.Left>
+                                <Binding Path="TelescopeRadarX" />
+                            </Canvas.Left>
+                            <Canvas.Top>
+                                <Binding Path="TelescopeRadarY" />
+                            </Canvas.Top>
+                            <Ellipse Width="18" Height="18" Stroke="#EF4444" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Ellipse Width="4" Height="4" Fill="#EF4444" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Line X1="0" Y1="12" X2="24" Y2="12" Stroke="#EF4444" StrokeThickness="1.0" />
+                            <Line X1="12" Y1="0" X2="12" Y2="24" Stroke="#EF4444" StrokeThickness="1.0" />
+                        </Grid>
+                    </Canvas>
+
+                    <!-- 4. Active/Selected Node Indicator -->
+                    <Canvas IsHitTestVisible="False">
+                        <Canvas.Style>
+                            <Style TargetType="Canvas">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Parent.HasActiveNode}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Canvas.Style>
+                        <Grid Width="20" Height="20" Margin="-10,-10,0,0">
+                            <Canvas.Left>
+                                <Binding Path="ActiveNodeRadarX" />
+                            </Canvas.Left>
+                            <Canvas.Top>
+                                <Binding Path="ActiveNodeRadarY" />
+                            </Canvas.Top>
+                            <Ellipse Width="16" Height="16" Stroke="#FF00F3FF" StrokeThickness="2.0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Ellipse Width="4" Height="4" Fill="#FF00F3FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </Canvas>
+
+                    <!-- Sync Landmarks Collection -->
+                    <ItemsControl ItemsSource="{Binding Parent.SyncLandmarks}" IsHitTestVisible="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas Width="500" Height="500" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding RadarX}" />
+                                <Setter Property="Canvas.Top" Value="{Binding RadarY}" />
+                                <Setter Property="Margin" Value="-6,-6,0,0" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Width="12" Height="12">
+                                    <!-- Highlight ring if selected -->
+                                    <Ellipse x:Name="HighlightRing" Width="18" Height="18" Margin="-3,-3,0,0" Stroke="#FFD946EF" StrokeThickness="1.2" Visibility="Collapsed" />
+                                    <Path Data="M 6,0 L 12,6 L 6,12 L 0,6 Z" Fill="#FFD946EF" Stroke="#FF0c0c0e" StrokeThickness="1.0" ToolTip="{Binding Name}" />
+                                    <!-- Name label below diamond -->
+                                    <TextBlock Text="{Binding Name}" Foreground="#FFD946EF" FontSize="8" Margin="14,-2,0,0" />
+                                </Grid>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                        <Setter TargetName="HighlightRing" Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Profile Sync Reference Target Overlay -->
+                    <Canvas IsHitTestVisible="False">
+                        <Canvas.Style>
+                            <Style TargetType="Canvas">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Parent.IsSyncPreparing}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Canvas.Style>
+                        <Grid Width="24" Height="24" Margin="-12,-12,0,0">
+                            <Canvas.Left>
+                                <Binding Path="ActiveNodeRadarX" />
+                            </Canvas.Left>
+                            <Canvas.Top>
+                                <Binding Path="ActiveNodeRadarY" />
+                            </Canvas.Top>
+                            <Ellipse Width="20" Height="20" Stroke="#C08B5CF6" StrokeThickness="2.0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Ellipse Width="8" Height="8" Fill="#8B5CF6" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </Canvas>
+                </Canvas>
+            </Grid>
+        </Viewbox>
+
+        <!-- Shaded Legend Card in the Corner -->
+        <Border CornerRadius="4" Background="#1A1A22" BorderThickness="1" BorderBrush="#2D2D38" Padding="8,6" Margin="10" VerticalAlignment="Bottom" HorizontalAlignment="Left" Opacity="0.8">
+            <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <Border Width="12" Height="8" CornerRadius="1" BorderBrush="#FF00F3FF" BorderThickness="1.5" Background="#1E00F3FF" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Text="Horizon Obstruction Zone" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <Ellipse Width="6" Height="6" Fill="#FFF59E0B" VerticalAlignment="Center" Margin="3,0,9,0" />
+                    <TextBlock Text="Horizon Nodes (Pins)" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <Ellipse Width="6" Height="6" Stroke="#EF4444" StrokeThickness="1.5" VerticalAlignment="Center" Margin="3,0,9,0" />
+                    <TextBlock Text="Telescope Pointer (Active)" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="6" Height="6" Stroke="#FF00F3FF" StrokeThickness="1.5" VerticalAlignment="Center" Margin="3,0,9,0" />
+                    <TextBlock Text="Active Verification Node" FontSize="8.5" Foreground="DarkGray" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
