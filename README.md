@@ -2,7 +2,7 @@
 
 **Horizon Studio** is a professional-grade tool for creating, editing, and calibrating local horizon profiles in Nighttime Imaging 'N' Astronomy (N.I.N.A.).
 
-Instead of guessing where trees, rooftops, or distant mountains intersect the night sky, Horizon Studio allows you to trace your actual, physical horizon using a live video feed, generating a native `.hrzn` file that prevents your telescope from slewing into obstructions.
+Instead of guessing where trees, rooftops, or distant mountains intersect the night sky, Horizon Studio allows you to trace your actual, physical horizon using a live video feed, generating a native `.hrz` file that prevents your telescope from slewing into obstructions.
 
 ---
 
@@ -36,6 +36,12 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 * **Dynamic Pin Dropping:** Drop nodes at your mount's position to build the horizon profile in real-time. Pins are automatically kept sorted by Azimuth.
 * **Point Editing & Deletion:** Select any node to view its coordinates, slew to it, or delete it from the profile.
 
+### 🔷 Multiple Terrestrial Landmarks
+* **Terrestrial Landmarks Management:** Add and manage a collection of permanent landmarks (such as antennas, roof pinnacles, or mountain peaks) that are visible from your observing site.
+* **Dual Radar Visualization:** Landmarks are plotted as fuchsia diamonds (🔷) on both the Live View HUD and Sky Dome radars, displaying their custom names with active selection highlights.
+* **One-Click Traversal & Slew:** Select any landmark from the list or by clicking its diamond on the radars to slew directly to it, delete it, or rename it.
+* **Non-Obstruction Annotation:** Landmarks are stored as comment headers at the top of the `.hrz` file, maintaining 100% compatibility with native N.I.N.A. horizon files.
+
 ---
 
 ## 🛠️ Requirements
@@ -53,14 +59,14 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 3. Use the jogging controls to move the mount to the peak of a local obstacle (e.g. a tree top or roof line).
 4. Click **Drop Pin** to save that horizon point.
 5. Move the mount to the next obstacle along the horizon and click **Drop Pin** again. Repeat until you have mapped your sky.
-6. Click **Save Horizon Profile** to save your `.hrzn` file.
+6. Click **Save Horizon Profile** to save your `.hrz` file.
 
 > 💡 **Pro-Tip:** The fastest way to build a profile is to map 3–4 macro "anchor points" around your sky first (e.g., major roof peaks or cardinal direction markers). Once those are dropped, click along the generated radar line to automatically slew nearby, and use the jogging controls to fine-tune the subtle dips and peaks.
 
 ---
 
 ### 2. Loading & Editing Profiles
-* **Load Profile:** Click **Load Horizon Profile** to load a previously saved `.hrzn` file.
+* **Load Profile:** Click **Load Horizon Profile** to load a previously saved `.hrz` file.
 * **Add/Modify Pins:** Slew to any area and click **Drop Pin** to add new nodes.
 * **Delete Pins:** Click a node on the radar to select it, then click **Delete Node** to remove it.
 * **Verify Coords:** Click `◀ Slew CCW` or `Slew CW ▶` to step through your mapped nodes, verifying that the telescope points clear of physical obstructions.
@@ -85,19 +91,24 @@ Use this if you want to align your profile using a physical feature that is alre
 
 ---
 
-#### Method B: Landmark Sync (Using a Special Landmark)
-Use this if you want to align using a highly striking reference landmark (like an antenna tip or tower peak) that sits above or below your actual horizon. To prevent N.I.N.A. from treating this landmark as an obstruction, Horizon Studio embeds the coordinates safely as hidden metadata comments directly inside the `.hrzn` file, keeping it 100% compatible with native N.I.N.A. settings.
-1. Slew the telescope and center the striking landmark under your camera crosshairs.
-2. On the **🔷 Special Sync Landmark** card, click **Set Mount as Landmark**. A fuchsia diamond 🔷 appears on the radar at those coordinates.
-3. Click **Save Horizon Profile**. The plugin writes the landmark data to the top of the file as an internal comment header. (You can freely rename this file as you wish; the sync data will not be lost).
-4. **Calibrating in a Future Session:**
-   * Click **Load Horizon Profile** and load your file. The fuchsia diamond 🔷 immediately appears on the radar based on the file's internal metadata.
-   * Click **Slew** on the landmark card to automatically move your telescope to the landmark's saved position.
-   * Click **🔷 Select Landmark** on the card (or click directly on the fuchsia diamond 🔷 on the radar) to select it.
-   * Click **Prepare Sync** on the details card.
-   * Jog the mount to center the physical landmark under your crosshairs.
-   * Click **Confirm Sync** once enabled (the mount must be jogged past the 0.05° safety threshold) to warp your horizon profile.
-   * Save your horizon profile to update the internal metadata with your new calibrated landmark coordinates.
+#### Method B: Landmark Sync (Using Terrestrial Landmarks)
+Use this if you want to align your profile using one or more highly striking reference landmarks (like an antenna tip or tower peak) that sit above or below your actual horizon. Horizon Studio allows you to create and manage multiple landmarks. To prevent N.I.N.A. from treating them as obstructions, their coordinates are safely embedded as hidden metadata comment headers directly inside the `.hrz` file.
+
+1. **Adding Landmarks:**
+   * Slew your telescope and center a striking landmark under your camera crosshairs.
+   * On the **🔷 SYNC LANDMARKS** card, click **➕ Add**. A new landmark will be created at your mount's current coordinates.
+   * Repeat this for any other landmarks visible from your site.
+   * *(Optional)* Click **✏️ Rename** to give your landmarks custom names (e.g., `"Antena"`, `"Tree"`).
+   * Click **Save Horizon Profile** to store all landmarks directly in the file.
+
+2. **Calibrating in a Future Session:**
+   * Click **Load Horizon Profile** and load your `.hrz` file. All fuchsia diamonds (🔷) will immediately populate on both radars.
+   * Select a landmark from the list or click its diamond on the radar. The active sync area will display the landmark's name and coordinates.
+   * Click **Slew** to point your telescope at the landmark's saved position.
+   * Click **Prepare Sync**.
+   * Look at your camera feed and manually jog the mount to center the physical landmark under the crosshairs.
+   * Once you jog the mount past the safety threshold ($0.05^\circ$), click **Confirm Sync**. The entire horizon profile (and all other landmarks in the collection) will shift and warp to match your new alignment!
+   * Save your horizon profile to update the coordinates for all landmarks.
 
 ---
 

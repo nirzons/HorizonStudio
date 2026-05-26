@@ -33,10 +33,12 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
         public ICommand PrepareSyncCommand { get; }
         public ICommand ConfirmSyncCommand { get; }
         public ICommand CancelSyncCommand { get; }
-        public ICommand SetSpecialSyncNodeCommand { get; }
-        public ICommand ClearSpecialSyncNodeCommand { get; }
-        public ICommand SlewToSpecialSyncNodeCommand { get; }
-        public ICommand SelectSpecialSyncNodeCommand { get; }
+        public ICommand AddLandmarkCommand { get; }
+        public ICommand DeleteLandmarkCommand { get; }
+        public ICommand SlewToLandmarkCommand { get; }
+        public ICommand SelectLandmarkCommand { get; }
+        public ICommand RenameLandmarkCommand { get; }
+        public ICommand ClearAllLandmarksCommand { get; }
 
         public MappingCommands(HorizonMapperDockableVM vm, ITelescopeMediator telescopeMediator, IProfileService profileService) {
             _vm = vm;
@@ -58,10 +60,12 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             PrepareSyncCommand = new RelayCommand(o => PrepareSync(), o => _vm.CanPrepareSync);
             ConfirmSyncCommand = new RelayCommand(o => ConfirmSync(), o => _vm.CanConfirmSync);
             CancelSyncCommand = new RelayCommand(o => CancelSync(), o => _vm.IsSyncPreparing);
-            SetSpecialSyncNodeCommand = new RelayCommand(o => SetSpecialSyncNode(), o => _vm.IsMountConnected);
-            ClearSpecialSyncNodeCommand = new RelayCommand(o => ClearSpecialSyncNode(), o => _vm.HasSpecialSyncNode);
-            SlewToSpecialSyncNodeCommand = new RelayCommand(o => SlewToSpecialSyncNode(), o => _vm.HasSpecialSyncNode && _vm.IsMountConnected && !_vm.IsSlewing && !_vm.IsActionSlewing);
-            SelectSpecialSyncNodeCommand = new RelayCommand(o => SelectSpecialSyncNode(), o => _vm.HasSpecialSyncNode && !_vm.IsSyncPreparing);
+            AddLandmarkCommand = new RelayCommand(o => AddLandmark(), o => _vm.IsMountConnected);
+            DeleteLandmarkCommand = new RelayCommand(o => DeleteLandmark(), o => _vm.SelectedLandmark != null);
+            SlewToLandmarkCommand = new RelayCommand(o => SlewToLandmark(), o => _vm.SelectedLandmark != null && _vm.IsMountConnected && !_vm.IsSlewing && !_vm.IsActionSlewing);
+            SelectLandmarkCommand = new RelayCommand(o => SelectLandmark(o as SyncLandmark), o => o is SyncLandmark && !_vm.IsSyncPreparing);
+            RenameLandmarkCommand = new RelayCommand(o => RenameLandmark(o as string), o => _vm.SelectedLandmark != null);
+            ClearAllLandmarksCommand = new RelayCommand(o => ClearAllLandmarks(), o => _vm.HasLandmarks);
         }
 
         public void PrepareSync() {
@@ -75,43 +79,46 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             }
             _vm.SyncRefNode = _vm.ActiveNode;
             _vm.IsSyncPreparing = true;
-            if (_vm.IsSpecialSyncNodeSelected) {
-                _vm.Log($"[Profile Sync] Prepared sync using Special Landmark (Alt: {_vm.SyncRefNode.Altitude:F2}°, Az: {_vm.SyncRefNode.Azimuth:F2}°) as reference. Jog the mount to center this landmark in the webcam view, then click Confirm Sync.");
+            if (_vm.SelectedLandmark != null) {
+                _vm.Log($"[Profile Sync] Prepared sync using Landmark '{_vm.SelectedLandmark.Name}' (Alt: {_vm.SyncRefNode.Altitude:F2}°, Az: {_vm.SyncRefNode.Azimuth:F2}°) as reference. Jog the mount to center this landmark in the webcam view, then click Confirm Sync.");
             } else {
                 _vm.Log($"[Profile Sync] Prepared sync using node {_vm.ActiveNodeIndex} (Alt: {_vm.SyncRefNode.Altitude:F2}°, Az: {_vm.SyncRefNode.Azimuth:F2}°) as reference. Jog the mount to center the physical landmark, then click Confirm Sync.");
             }
         }
 
-        public void SelectSpecialSyncNode() {
-            if (_vm.SpecialSyncNode == null) return;
-            _vm.IsSpecialSyncNodeSelected = true;
-            _vm.Log($"[Special Sync] Selected Special Sync Landmark - Alt: {_vm.SpecialSyncNode.Altitude:F2}°, Az: {_vm.SpecialSyncNode.Azimuth:F2}°");
-        }
-
-        public void CancelSync() {
-            _vm.SyncRefNode = null;
-            _vm.IsSyncPreparing = false;
-            _vm.Log("[Profile Sync] Profile sync cancelled.");
-        }
-
-        public void SetSpecialSyncNode() {
+        public void AddLandmark() {
             if (!_vm.IsMountConnected) {
-                _vm.Log("[Error] Cannot set special sync node: Mount is not connected.");
+                _vm.Log("[Error] Cannot add landmark: Mount is not connected.");
                 return;
             }
             double az = _vm.CurrentAz;
             double alt = _vm.CurrentAlt;
-            _vm.SpecialSyncNode = new HorizonNode(az, alt);
-            _vm.Log($"[Special Sync] Set special sync landmark at Az: {az:F2}°, Alt: {alt:F2}°");
+
+            int count = _vm.SyncLandmarks.Count + 1;
+            string name = $"Landmark {count}";
+            while (_vm.SyncLandmarks.Any(l => string.Equals(l.Name, name, StringComparison.OrdinalIgnoreCase))) {
+                count++;
+                name = $"Landmark {count}";
+            }
+
+            var landmark = new SyncLandmark(name, az, alt);
+            _vm.SyncLandmarks.Add(landmark);
+            _vm.SelectedLandmark = landmark;
+            _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
+            _vm.Log($"[Landmarks] Added landmark '{name}' at Az: {az:F2}°, Alt: {alt:F2}°");
         }
 
-        public void ClearSpecialSyncNode() {
-            _vm.SpecialSyncNode = null;
-            _vm.Log("[Special Sync] Cleared special sync landmark.");
+        public void DeleteLandmark() {
+            if (_vm.SelectedLandmark == null) return;
+            var name = _vm.SelectedLandmark.Name;
+            _vm.SyncLandmarks.Remove(_vm.SelectedLandmark);
+            _vm.SelectedLandmark = null;
+            _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
+            _vm.Log($"[Landmarks] Removed landmark '{name}'.");
         }
 
-        public void SlewToSpecialSyncNode() {
-            if (_vm.SpecialSyncNode == null) return;
+        public void SlewToLandmark() {
+            if (_vm.SelectedLandmark == null) return;
             if (!_vm.IsMountConnected) {
                 _vm.Log("[Error] Slew blocked: Mount is not connected.");
                 return;
@@ -121,13 +128,13 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 return;
             }
 
-            double targetAlt = _vm.SpecialSyncNode.Altitude;
-            double targetAz = _vm.SpecialSyncNode.Azimuth;
+            double targetAlt = _vm.SelectedLandmark.Altitude;
+            double targetAz = _vm.SelectedLandmark.Azimuth;
 
             try {
                 if (_telescopeMediator.GetInfo()?.Connected == true) {
                     _telescopeMediator.SetTrackingEnabled(false);
-                    _vm.Log("Sidereal tracking automatically suspended for special landmark slew.");
+                    _vm.Log("Sidereal tracking automatically suspended for landmark slew.");
                 }
             } catch (Exception ex) {
                 _vm.Log($"[Warning] Failed to auto-disable tracking: {ex.Message}");
@@ -139,7 +146,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             System.Threading.Tasks.Task.Run(async () => {
                 try {
-                    _vm.Log($"[Special Slew] Slewing mount to landmark - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
+                    _vm.Log($"[Landmark Slew] Slewing mount to landmark '{_vm.SelectedLandmark?.Name}' - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
 
                     double lat = _telescopeMediator.GetInfo()?.SiteLatitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Latitude ?? 0.0;
                     double lon = _telescopeMediator.GetInfo()?.SiteLongitude ?? _profileService?.ActiveProfile?.AstrometrySettings?.Longitude ?? 0.0;
@@ -197,6 +204,44 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             });
         }
 
+        public void SelectLandmark(SyncLandmark landmark) {
+            if (landmark == null) return;
+            _vm.SelectedLandmark = landmark;
+            _vm.Log($"[Landmarks] Selected landmark '{landmark.Name}' - Alt: {landmark.Altitude:F2}°, Az: {landmark.Azimuth:F2}°");
+        }
+
+        public void RenameLandmark(string newName = null) {
+            if (_vm.SelectedLandmark == null) return;
+            string oldName = _vm.SelectedLandmark.Name;
+
+            if (string.IsNullOrEmpty(newName)) {
+                newName = RenameDialog.Show(oldName, "Rename Landmark");
+            }
+
+            if (!string.IsNullOrEmpty(newName) && !string.Equals(oldName, newName, StringComparison.Ordinal)) {
+                if (_vm.SyncLandmarks.Any(l => l != _vm.SelectedLandmark && string.Equals(l.Name, newName, StringComparison.OrdinalIgnoreCase))) {
+                    System.Windows.MessageBox.Show($"A landmark with the name '{newName}' already exists.", "Duplicate Name", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    return;
+                }
+                _vm.SelectedLandmark.Name = newName;
+                _vm.Log($"[Landmarks] Renamed landmark '{oldName}' to '{newName}'.");
+            }
+        }
+
+        public void ClearAllLandmarks() {
+            if (_vm.SyncLandmarks.Count == 0) return;
+            _vm.SyncLandmarks.Clear();
+            _vm.SelectedLandmark = null;
+            _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
+            _vm.Log("[Landmarks] Cleared all landmarks.");
+        }
+
+        public void CancelSync() {
+            _vm.SyncRefNode = null;
+            _vm.IsSyncPreparing = false;
+            _vm.Log("[Profile Sync] Profile sync cancelled.");
+        }
+
         public void ConfirmSync() {
             if (!_vm.IsSyncPreparing || _vm.SyncRefNode == null) {
                 _vm.Log("[Error] Cannot confirm sync: Sync is not prepared.");
@@ -240,9 +285,23 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             try {
                 if (_vm.HorizonNodes.Count == 0) {
-                    if (_vm.SpecialSyncNode != null) {
-                        _vm.SpecialSyncNode = new HorizonNode(currentAz, currentAlt);
-                        _vm.Log($"[Profile Sync] Warped special sync landmark to Az: {currentAz:F2}°, Alt: {currentAlt:F2}° (No horizon points to warp).");
+                    if (_vm.SelectedLandmark != null) {
+                        _vm.SelectedLandmark.Azimuth = currentAz;
+                        _vm.SelectedLandmark.Altitude = currentAlt;
+
+                        foreach (var landmark in _vm.SyncLandmarks) {
+                            if (landmark == _vm.SelectedLandmark) continue;
+                            double oldAz = landmark.Azimuth;
+                            double oldAlt = landmark.Altitude;
+                            double newAz = (oldAz + deltaAz) % 360.0;
+                            if (newAz < 0.0) newAz += 360.0;
+                            double newAlt = oldAlt + (deltaAlt * Math.Cos((oldAz - syncRefAz) * Math.PI / 180.0));
+                            newAlt = Math.Max(-90.0, Math.Min(90.0, newAlt));
+
+                            landmark.Azimuth = newAz;
+                            landmark.Altitude = newAlt;
+                        }
+                        _vm.Log($"[Profile Sync] Synced landmark '{_vm.SelectedLandmark.Name}' (No horizon points to warp).");
                     }
                     _vm.IsSyncPreparing = false;
                     _vm.SyncRefNode = null;
@@ -279,19 +338,27 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 }
 
                 HorizonNode newSyncRefNode = null;
-                if (_vm.SyncRefNode == _vm.SpecialSyncNode) {
-                    _vm.SpecialSyncNode = new HorizonNode(currentAz, currentAlt);
+                if (_vm.SelectedLandmark != null) {
+                    _vm.SelectedLandmark.Azimuth = currentAz;
+                    _vm.SelectedLandmark.Altitude = currentAlt;
                 } else {
                     oldToNewMap.TryGetValue(_vm.SyncRefNode, out newSyncRefNode);
-                    if (_vm.SpecialSyncNode != null) {
-                        double oldAz = _vm.SpecialSyncNode.Azimuth;
-                        double oldAlt = _vm.SpecialSyncNode.Altitude;
-                        double newAz = (oldAz + deltaAz) % 360.0;
-                        if (newAz < 0.0) newAz += 360.0;
-                        double newAlt = oldAlt + (deltaAlt * Math.Cos((oldAz - syncRefAz) * Math.PI / 180.0));
-                        newAlt = Math.Max(-90.0, Math.Min(90.0, newAlt));
-                        _vm.SpecialSyncNode = new HorizonNode(newAz, newAlt);
+                }
+
+                // Apply 3D cosine-tilt warp to all other landmarks
+                foreach (var landmark in _vm.SyncLandmarks) {
+                    if (_vm.SelectedLandmark != null && landmark == _vm.SelectedLandmark) {
+                        continue;
                     }
+                    double oldAz = landmark.Azimuth;
+                    double oldAlt = landmark.Altitude;
+                    double newAz = (oldAz + deltaAz) % 360.0;
+                    if (newAz < 0.0) newAz += 360.0;
+                    double newAlt = oldAlt + (deltaAlt * Math.Cos((oldAz - syncRefAz) * Math.PI / 180.0));
+                    newAlt = Math.Max(-90.0, Math.Min(90.0, newAlt));
+
+                    landmark.Azimuth = newAz;
+                    landmark.Altitude = newAlt;
                 }
 
                 _vm.HorizonNodes.Clear();
@@ -374,12 +441,12 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 _vm.Log($"[Save] Writing {rawNodes.Count} pinned nodes (N.I.N.A. interpolates natively).");
 
                 // Step 3: Prompt user for save location
-                string suggestedName = $"CustomHorizon_{DateTime.Now:yyyyMMdd_HHmm}.hrzn";
+                string suggestedName = $"CustomHorizon_{DateTime.Now:yyyyMMdd_HHmm}.hrz";
 
                 var dialog = new SaveFileDialog {
                     Title = "Save N.I.N.A. Horizon Profile",
-                    Filter = "N.I.N.A. Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
-                    DefaultExt = ".hrzn",
+                    Filter = "N.I.N.A. Horizon Files (*.hrz)|*.hrz|Legacy Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                    DefaultExt = ".hrz",
                     FileName = suggestedName
                 };
 
@@ -389,8 +456,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     // so we can safely embed our landmark coordinates as a comment.
                     var fileLines = new List<string>();
 
-                    if (_vm.SpecialSyncNode != null) {
-                        fileLines.Add($"# HorizonStudio_Metadata: LandmarkAz={_vm.SpecialSyncNode.Azimuth.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}; LandmarkAlt={_vm.SpecialSyncNode.Altitude.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
+                    foreach (var landmark in _vm.SyncLandmarks) {
+                        fileLines.Add($"# HorizonStudio_Landmark: Id={landmark.Id};Name={landmark.Name};Az={landmark.Azimuth.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)};Alt={landmark.Altitude.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
                     }
                     fileLines.Add("# Az Alt");
 
@@ -427,8 +494,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             var dialog = new OpenFileDialog {
                 Title = "Load N.I.N.A. Horizon Profile",
-                Filter = "N.I.N.A. Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
-                DefaultExt = ".hrzn"
+                Filter = "N.I.N.A. Horizon Files (*.hrz)|*.hrz|Legacy Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                DefaultExt = ".hrz"
             };
 
             if (dialog.ShowDialog() == true) {
@@ -439,25 +506,40 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
                     // Parse landmark metadata from comment header (if present).
                     // Also supports legacy filename-based encoding for backwards compatibility.
-                    _vm.SpecialSyncNode = null;
+                    _vm.SyncLandmarks.Clear();
+                    _vm.SelectedLandmark = null;
                     foreach (var line in lines) {
                         var trimmed = line.Trim();
-                        if (trimmed.StartsWith("# HorizonStudio_Metadata:")) {
-                            var metaMatch = Regex.Match(trimmed, @"LandmarkAz=(?<az>[\d.]+).*LandmarkAlt=(?<alt>[-]?[\d.]+)");
+                        if (trimmed.StartsWith("# HorizonStudio_Landmark:")) {
+                            var idMatch = Regex.Match(trimmed, @"Id=(?<id>[^;]+)");
+                            var nameMatch = Regex.Match(trimmed, @"Name=(?<name>[^;]+)");
+                            var azMatch = Regex.Match(trimmed, @"Az=(?<az>[\d.-]+)");
+                            var altMatch = Regex.Match(trimmed, @"Alt=(?<alt>[\d.-]+)");
+
+                            if (azMatch.Success && altMatch.Success &&
+                                double.TryParse(azMatch.Groups["az"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAz) &&
+                                double.TryParse(altMatch.Groups["alt"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAlt)) {
+                                
+                                string id = idMatch.Success ? idMatch.Groups["id"].Value : Guid.NewGuid().ToString();
+                                string name = nameMatch.Success ? nameMatch.Groups["name"].Value : $"Landmark {_vm.SyncLandmarks.Count + 1}";
+                                var landmark = new SyncLandmark(id, name, parsedAz, parsedAlt);
+                                _vm.SyncLandmarks.Add(landmark);
+                            }
+                        } else if (trimmed.StartsWith("# HorizonStudio_Metadata:")) {
+                            var metaMatch = Regex.Match(trimmed, @"LandmarkAz=(?<az>[\d.-]+).*LandmarkAlt=(?<alt>[-]?[\d.-]+)");
                             if (metaMatch.Success &&
                                 double.TryParse(metaMatch.Groups["az"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAz) &&
                                 double.TryParse(metaMatch.Groups["alt"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedAlt)) {
-                                _vm.SpecialSyncNode = new HorizonNode(parsedAz, parsedAlt);
-                                _vm.Log($"[Load] Extracted special sync landmark from file metadata: Az {parsedAz:F2}°, Alt {parsedAlt:F2}°");
+                                
+                                var landmark = new SyncLandmark(Guid.NewGuid().ToString(), "Landmark 1", parsedAz, parsedAlt);
+                                _vm.SyncLandmarks.Add(landmark);
+                                _vm.Log($"[Load] Extracted legacy single landmark from file metadata: Az {parsedAz:F2}°, Alt {parsedAlt:F2}°");
                             }
-                            break; // Metadata found, stop scanning comments
                         }
-                        // Stop scanning once we hit a non-comment, non-empty line
                         if (!string.IsNullOrWhiteSpace(trimmed) && !trimmed.StartsWith("#")) break;
                     }
 
-                    // Legacy fallback: try extracting landmark from filename if not found in file content
-                    if (_vm.SpecialSyncNode == null) {
+                    if (_vm.SyncLandmarks.Count == 0) {
                         string fileName = Path.GetFileName(dialog.FileName);
                         var match = Regex.Match(fileName, @"_sync_Az(?<az>\d+(\.\d+)?)(_Alt|-Alt)(?<alt>[-]?\d+(\.\d+)?)", RegexOptions.IgnoreCase);
                         if (!match.Success) {
@@ -466,9 +548,16 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                         if (match.Success &&
                             double.TryParse(match.Groups["az"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double legacyAz) &&
                             double.TryParse(match.Groups["alt"].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double legacyAlt)) {
-                            _vm.SpecialSyncNode = new HorizonNode(legacyAz, legacyAlt);
-                            _vm.Log($"[Load] Extracted special sync landmark from legacy filename: Az {legacyAz:F2}°, Alt {legacyAlt:F2}°");
+                            
+                            var landmark = new SyncLandmark(Guid.NewGuid().ToString(), "Landmark 1", legacyAz, legacyAlt);
+                            _vm.SyncLandmarks.Add(landmark);
+                            _vm.Log($"[Load] Extracted legacy special sync landmark from legacy filename: Az {legacyAz:F2}°, Alt {legacyAlt:F2}°");
                         }
+                    }
+
+                    if (_vm.SyncLandmarks.Count > 0) {
+                        _vm.SelectedLandmark = _vm.SyncLandmarks[0];
+                        _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
                     }
 
                     // Parse coordinate lines (skip comments and blank lines)
@@ -872,10 +961,12 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             var activeNode = _vm.ActiveNode;
             if (activeNode == null) return;
 
-            if (_vm.IsSpecialSyncNodeSelected) {
-                _vm.SpecialSyncNode = null;
-                _vm.IsSpecialSyncNodeSelected = false;
-                _vm.Log("[Special Sync] Cleared special sync landmark via Active Node card deletion.");
+            if (_vm.SelectedLandmark != null) {
+                var name = _vm.SelectedLandmark.Name;
+                _vm.SyncLandmarks.Remove(_vm.SelectedLandmark);
+                _vm.SelectedLandmark = null;
+                _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
+                _vm.Log($"[Landmarks] Removed landmark '{name}' via Active Node card deletion.");
                 return;
             }
 
@@ -934,23 +1025,23 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             if (altitude < 0.0) altitude = 0.0;
             if (altitude > 90.0) altitude = 90.0;
 
-            // Check if we are snapping to the Special Sync Node (within 2.5 degrees)
-            bool snappedSpecial = false;
-            if (_vm.SpecialSyncNode != null) {
-                double distToSpecial = GetAngularDistance(azimuth, altitude, _vm.SpecialSyncNode.Azimuth, _vm.SpecialSyncNode.Altitude);
+            SyncLandmark snappedLandmark = null;
+            foreach (var landmark in _vm.SyncLandmarks) {
+                double distToSpecial = GetAngularDistance(azimuth, altitude, landmark.Azimuth, landmark.Altitude);
                 if (distToSpecial < 2.5) {
-                    snappedSpecial = true;
+                    snappedLandmark = landmark;
+                    break;
                 }
             }
 
             double targetAlt;
             double targetAz;
 
-            if (snappedSpecial) {
-                _vm.IsSpecialSyncNodeSelected = true;
-                targetAlt = _vm.SpecialSyncNode.Altitude;
-                targetAz = _vm.SpecialSyncNode.Azimuth;
-                _vm.Log($"[Radar Click] Snapped to Special Sync Landmark - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
+            if (snappedLandmark != null) {
+                _vm.SelectedLandmark = snappedLandmark;
+                targetAlt = snappedLandmark.Altitude;
+                targetAz = snappedLandmark.Azimuth;
+                _vm.Log($"[Radar Click] Snapped to Sync Landmark '{snappedLandmark.Name}' - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
             } else {
                 // Determine clicked altitude on the horizon line for snapping
                 double clickedAlt = _vm.HorizonNodes.Count > 0 ? _vm.GetInterpolatedAltitude(azimuth) : altitude;
@@ -1101,6 +1192,83 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             cosTheta = Math.Max(-1.0, Math.Min(1.0, cosTheta));
 
             return Math.Acos(cosTheta) * 180.0 / Math.PI;
+        }
+    }
+
+    public static class RenameDialog {
+        public static string Show(string defaultText, string title) {
+            var dialog = new System.Windows.Window {
+                Title = title,
+                Width = 320,
+                SizeToContent = System.Windows.SizeToContent.Height,
+                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner,
+                Owner = System.Windows.Application.Current.MainWindow,
+                Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#0f0f12")),
+                BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#2A2A30")),
+                BorderThickness = new System.Windows.Thickness(1),
+                ResizeMode = System.Windows.ResizeMode.NoResize,
+                WindowStyle = System.Windows.WindowStyle.ToolWindow
+            };
+
+            var stack = new System.Windows.Controls.StackPanel { Margin = new System.Windows.Thickness(15) };
+            
+            var label = new System.Windows.Controls.TextBlock {
+                Text = "Enter landmark name:",
+                Foreground = System.Windows.Media.Brushes.DarkGray,
+                FontSize = 11,
+                Margin = new System.Windows.Thickness(0, 0, 0, 8)
+            };
+            stack.Children.Add(label);
+
+            var textBox = new System.Windows.Controls.TextBox {
+                Text = defaultText,
+                Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#1E1E24")),
+                BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#3D3D45")),
+                Foreground = System.Windows.Media.Brushes.White,
+                Padding = new System.Windows.Thickness(4, 2, 4, 2),
+                CaretBrush = System.Windows.Media.Brushes.White,
+                Margin = new System.Windows.Thickness(0, 0, 0, 12)
+            };
+            textBox.SelectAll();
+            stack.Children.Add(textBox);
+
+            var buttonsGrid = new System.Windows.Controls.Grid();
+            buttonsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+            buttonsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+
+            var okButton = new System.Windows.Controls.Button {
+                Content = "OK",
+                IsDefault = true,
+                Height = 24,
+                Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#8B5CF6")),
+                Foreground = System.Windows.Media.Brushes.White,
+                Margin = new System.Windows.Thickness(0, 0, 4, 0)
+            };
+            okButton.Click += (s, e) => { dialog.DialogResult = true; dialog.Close(); };
+            System.Windows.Controls.Grid.SetColumn(okButton, 0);
+            buttonsGrid.Children.Add(okButton);
+
+            var cancelButton = new System.Windows.Controls.Button {
+                Content = "Cancel",
+                IsCancel = true,
+                Height = 24,
+                Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#ef4444")),
+                Foreground = System.Windows.Media.Brushes.White,
+                Margin = new System.Windows.Thickness(4, 0, 0, 0)
+            };
+            cancelButton.Click += (s, e) => { dialog.DialogResult = false; dialog.Close(); };
+            System.Windows.Controls.Grid.SetColumn(cancelButton, 1);
+            buttonsGrid.Children.Add(cancelButton);
+
+            stack.Children.Add(buttonsGrid);
+            dialog.Content = stack;
+
+            dialog.Loaded += (s, e) => textBox.Focus();
+
+            if (dialog.ShowDialog() == true) {
+                return textBox.Text.Trim();
+            }
+            return null;
         }
     }
 }

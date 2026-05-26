@@ -411,28 +411,37 @@
                                             </Grid>
                                         </Canvas>
 
-                                        <!-- Special Sync Node Landmark (🔷) -->
-                                        <Canvas IsHitTestVisible="False">
-                                            <Canvas.Style>
-                                                <Style TargetType="Canvas">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasSpecialSyncNode}" Value="True">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
+                                        <!-- Sync Landmarks Collection -->
+                                        <ItemsControl ItemsSource="{Binding SyncLandmarks}" IsHitTestVisible="False">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas Width="500" Height="500" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding RadarX}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding RadarY}" />
+                                                    <Setter Property="Margin" Value="-6,-6,0,0" />
                                                 </Style>
-                                            </Canvas.Style>
-                                            <Grid Width="12" Height="12" Margin="-6,-6,0,0">
-                                                <Canvas.Left>
-                                                    <Binding Path="SpecialSyncNodeRadarX" />
-                                                </Canvas.Left>
-                                                <Canvas.Top>
-                                                    <Binding Path="SpecialSyncNodeRadarY" />
-                                                </Canvas.Top>
-                                                <Path Data="M 6,0 L 12,6 L 6,12 L 0,6 Z" Fill="#FFD946EF" Stroke="#FF0c0c0e" StrokeThickness="1.0" ToolTip="Special Sync Node (Landmark)" />
-                                            </Grid>
-                                        </Canvas>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Width="12" Height="12">
+                                                        <!-- Highlight ring if selected -->
+                                                        <Ellipse x:Name="HighlightRing" Width="18" Height="18" Margin="-3,-3,0,0" Stroke="#FFD946EF" StrokeThickness="1.2" Visibility="Collapsed" />
+                                                        <Path Data="M 6,0 L 12,6 L 6,12 L 0,6 Z" Fill="#FFD946EF" Stroke="#FF0c0c0e" StrokeThickness="1.0" ToolTip="{Binding Name}" />
+                                                        <!-- Name label below diamond -->
+                                                        <TextBlock Text="{Binding Name}" Foreground="#FFD946EF" FontSize="8" Margin="14,-2,0,0" />
+                                                    </Grid>
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter TargetName="HighlightRing" Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
 
                                         <!-- Profile Sync Reference Target Overlay -->
                                         <Canvas IsHitTestVisible="False">
@@ -614,28 +623,37 @@
                                             </Grid>
                                         </Canvas>
 
-                                        <!-- Special Sync Node Landmark (🔷) -->
-                                        <Canvas IsHitTestVisible="False">
-                                            <Canvas.Style>
-                                                <Style TargetType="Canvas">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasSpecialSyncNode}" Value="True">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
+                                        <!-- Sync Landmarks Collection -->
+                                        <ItemsControl ItemsSource="{Binding SyncLandmarks}" IsHitTestVisible="False">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas Width="500" Height="500" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding RadarX}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding RadarY}" />
+                                                    <Setter Property="Margin" Value="-6,-6,0,0" />
                                                 </Style>
-                                            </Canvas.Style>
-                                            <Grid Width="12" Height="12" Margin="-6,-6,0,0">
-                                                <Canvas.Left>
-                                                    <Binding Path="SpecialSyncNodeRadarX" />
-                                                </Canvas.Left>
-                                                <Canvas.Top>
-                                                    <Binding Path="SpecialSyncNodeRadarY" />
-                                                </Canvas.Top>
-                                                <Path Data="M 6,0 L 12,6 L 6,12 L 0,6 Z" Fill="#FFD946EF" Stroke="#FF0c0c0e" StrokeThickness="1.0" ToolTip="Special Sync Node (Landmark)" />
-                                            </Grid>
-                                        </Canvas>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Width="12" Height="12">
+                                                        <!-- Highlight ring if selected -->
+                                                        <Ellipse x:Name="HighlightRing" Width="18" Height="18" Margin="-3,-3,0,0" Stroke="#FFD946EF" StrokeThickness="1.2" Visibility="Collapsed" />
+                                                        <Path Data="M 6,0 L 12,6 L 6,12 L 0,6 Z" Fill="#FFD946EF" Stroke="#FF0c0c0e" StrokeThickness="1.0" ToolTip="{Binding Name}" />
+                                                        <!-- Name label below diamond -->
+                                                        <TextBlock Text="{Binding Name}" Foreground="#FFD946EF" FontSize="8" Margin="14,-2,0,0" />
+                                                    </Grid>
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter TargetName="HighlightRing" Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                 </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
 
                                         <!-- Profile Sync Reference Target Overlay -->
                                         <Canvas IsHitTestVisible="False">
@@ -1118,8 +1136,8 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Save Horizon Profile" Command="{Binding SaveHorizonCommand}" Height="34" Background="#F59E0B" Margin="0,0,4,0" ToolTip="Save the collected pins to a N.I.N.A. .hrzn file" />
-                                    <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Load Horizon Profile" Command="{Binding LoadHorizonCommand}" Height="34" Background="#10B981" Margin="4,0,0,0" ToolTip="Load a N.I.N.A. .hrzn profile" />
+                                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Save Horizon Profile" Command="{Binding SaveHorizonCommand}" Height="34" Background="#F59E0B" Margin="0,0,4,0" ToolTip="Save the collected pins to a N.I.N.A. .hrz file" />
+                                    <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Load Horizon Profile" Command="{Binding LoadHorizonCommand}" Height="34" Background="#10B981" Margin="4,0,0,0" ToolTip="Load a N.I.N.A. .hrz profile" />
                                 </Grid>
                             </Grid>
 
@@ -1151,22 +1169,24 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- Special Sync Landmark Card -->
-                                    <!-- Special Sync Landmark Card -->
+                                    <!-- Sync Landmarks Management Card -->
                                     <Border CornerRadius="4" Background="#161b22" BorderThickness="1" BorderBrush="#2D2D35" Padding="8,6" Margin="0,8,0,0">
                                         <StackPanel Orientation="Vertical">
-                                            <Grid Margin="0,0,0,4">
+                                            <!-- Card Header -->
+                                            <Grid Margin="0,0,0,6">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="🔷 SPECIAL SYNC LANDMARK" FontSize="10" FontWeight="SemiBold" Foreground="#FFD946EF" VerticalAlignment="Center" />
-                                                <Button Grid.Column="1" Command="{Binding ClearSpecialSyncNodeCommand}" Content="❌ Clear" Height="18" Background="#EF4444" Foreground="White" FontSize="9" Padding="6,0" Cursor="Hand">
+                                                <TextBlock Text="🔷 SYNC LANDMARKS" FontSize="10" FontWeight="SemiBold" Foreground="#FFD946EF" VerticalAlignment="Center" />
+                                                <Button Grid.Column="1" Command="{Binding AddLandmarkCommand}" Content="➕ Add" Height="18" Background="#8B5CF6" Foreground="White" FontSize="9" Padding="6,0" Margin="0,0,4,0" Cursor="Hand" Style="{StaticResource ActionBtnStyle}" ToolTip="Add current mount coordinates as a sync landmark" />
+                                                <Button Grid.Column="2" Command="{Binding ClearAllLandmarksCommand}" Content="🗑️ Clear All" Height="18" Background="#EF4444" Foreground="White" FontSize="9" Padding="6,0" Cursor="Hand" ToolTip="Clear all landmarks">
                                                     <Button.Style>
                                                         <Style TargetType="Button" BasedOn="{StaticResource ActionBtnStyle}">
                                                             <Setter Property="Visibility" Value="Collapsed" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding HasSpecialSyncNode}" Value="True">
+                                                                <DataTrigger Binding="{Binding HasLandmarks}" Value="True">
                                                                     <Setter Property="Visibility" Value="Visible" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
@@ -1175,46 +1195,65 @@
                                                 </Button>
                                             </Grid>
 
-                                            <!-- If NOT defined, show button to set -->
-                                            <StackPanel Orientation="Vertical">
-                                                <StackPanel.Style>
-                                                    <Style TargetType="StackPanel">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                            <!-- Landmark List -->
+                                            <ListBox ItemsSource="{Binding SyncLandmarks}" SelectedItem="{Binding SelectedLandmark}" MaxHeight="120" Background="#0c0c0e" BorderThickness="1" BorderBrush="#2D2D35" Margin="0,2,0,4" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                                <ListBox.ItemContainerStyle>
+                                                    <Style TargetType="ListBoxItem">
+                                                        <Setter Property="Background" Value="Transparent" />
+                                                        <Setter Property="BorderThickness" Value="0" />
+                                                        <Setter Property="Padding" Value="6,4" />
+                                                        <Setter Property="Foreground" Value="White" />
+                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding HasSpecialSyncNode}" Value="False">
-                                                                <Setter Property="Visibility" Value="Visible" />
-                                                            </DataTrigger>
+                                                            <Trigger Property="IsSelected" Value="True">
+                                                                <Setter Property="Background" Value="#2D1B4E" />
+                                                            </Trigger>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#1A1A24" />
+                                                            </Trigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </StackPanel.Style>
-                                                <Button Style="{StaticResource ActionBtnStyle}" Content="Set Mount as Landmark" Command="{Binding SetSpecialSyncNodeCommand}" Height="24" Background="#8B5CF6" Margin="0,2,0,0" FontSize="10" ToolTip="Save current telescope coordinates as the Special Sync landmark" />
-                                            </StackPanel>
+                                                </ListBox.ItemContainerStyle>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" Foreground="#FFD946EF" VerticalAlignment="Center" FontSize="10.5" />
+                                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <TextBlock Text="  Az: " FontSize="9.5" Foreground="DarkGray" />
+                                                                <TextBlock Text="{Binding Azimuth, StringFormat={}{0:F1}°}" FontSize="9.5" FontWeight="Bold" Foreground="LightGray" Margin="0,0,6,0" />
+                                                                <TextBlock Text="Alt: " FontSize="9.5" Foreground="DarkGray" />
+                                                                <TextBlock Text="{Binding Altitude, StringFormat={}{0:F1}°}" FontSize="9.5" FontWeight="Bold" Foreground="LightGray" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
 
-                                            <!-- If defined, show coordinates and action buttons -->
+                                            <!-- Controls for Selected Landmark -->
                                             <StackPanel Orientation="Vertical">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
                                                         <Setter Property="Visibility" Value="Collapsed" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding HasSpecialSyncNode}" Value="True">
+                                                            <DataTrigger Binding="{Binding IsLandmarkSelected}" Value="True">
                                                                 <Setter Property="Visibility" Value="Visible" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </StackPanel.Style>
-                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,4">
-                                                    <TextBlock Text="Az: " FontSize="11" Foreground="DarkGray" />
-                                                    <TextBlock Text="{Binding SpecialSyncNode.Azimuth, StringFormat={}{0:F2}°}" FontSize="11" FontWeight="Bold" Foreground="#FFD946EF" />
-                                                    <TextBlock Text="  Alt: " FontSize="11" Foreground="DarkGray" />
-                                                    <TextBlock Text="{Binding SpecialSyncNode.Altitude, StringFormat={}{0:F2}°}" FontSize="11" FontWeight="Bold" Foreground="#FFD946EF" />
-                                                </StackPanel>
-                                                <Grid>
+                                                <Grid Margin="0,2,0,0">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="🔷 Slew" Command="{Binding SlewToSpecialSyncNodeCommand}" Height="24" Background="#4F46E5" Margin="0,0,3,0" FontSize="10" ToolTip="Slew mount directly to this landmark" />
-                                                    <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="🔷 Select Landmark" Command="{Binding SelectSpecialSyncNodeCommand}" Height="24" Background="#8B5CF6" Margin="3,0,0,0" FontSize="10" ToolTip="Select this landmark as the active target" />
+                                                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="✏️ Rename" Command="{Binding RenameLandmarkCommand}" Height="22" Background="#1E1B4B" Margin="0,0,2,0" FontSize="10" ToolTip="Rename the selected landmark" />
+                                                    <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="🔷 Slew" Command="{Binding SlewToLandmarkCommand}" Height="22" Background="#4F46E5" Margin="2,0,2,0" FontSize="10" ToolTip="Slew mount directly to this landmark" />
+                                                    <Button Grid.Column="2" Style="{StaticResource ActionBtnStyle}" Content="❌ Delete" Command="{Binding DeleteLandmarkCommand}" Height="22" Background="#EF4444" Margin="2,0,0,0" FontSize="10" ToolTip="Remove the selected landmark" />
                                                 </Grid>
                                             </StackPanel>
                                         </StackPanel>
@@ -1232,7 +1271,7 @@
                                                     <DataTrigger Binding="{Binding IsSyncPreparing}" Value="True">
                                                         <Setter Property="Visibility" Value="Visible" />
                                                     </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsSpecialSyncNodeSelected}" Value="True">
+                                                    <DataTrigger Binding="{Binding IsLandmarkSelected}" Value="True">
                                                         <Setter Property="Visibility" Value="Visible" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -1253,7 +1292,7 @@
                                                                 <DataTrigger Binding="{Binding IsSyncPreparing}" Value="True">
                                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                                 </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsSpecialSyncNodeSelected}" Value="True">
+                                                                <DataTrigger Binding="{Binding IsLandmarkSelected}" Value="True">
                                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
@@ -1265,7 +1304,7 @@
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Visibility" Value="Collapsed" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsSpecialSyncNodeSelected}" Value="True">
+                                                                <DataTrigger Binding="{Binding IsLandmarkSelected}" Value="True">
                                                                     <Setter Property="Visibility" Value="Visible" />
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding IsSyncPreparing}" Value="True">
@@ -1295,7 +1334,7 @@
                                                             <Style TargetType="StackPanel">
                                                                 <Setter Property="Visibility" Value="Visible" />
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsSpecialSyncNodeSelected}" Value="True">
+                                                                    <DataTrigger Binding="{Binding IsLandmarkSelected}" Value="True">
                                                                         <Setter Property="Visibility" Value="Collapsed" />
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
@@ -1312,13 +1351,14 @@
                                                             <Style TargetType="StackPanel">
                                                                 <Setter Property="Visibility" Value="Collapsed" />
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsSpecialSyncNodeSelected}" Value="True">
+                                                                    <DataTrigger Binding="{Binding IsLandmarkSelected}" Value="True">
                                                                         <Setter Property="Visibility" Value="Visible" />
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </StackPanel.Style>
-                                                        <TextBlock Text="Landmark  |  " FontSize="11" FontWeight="Bold" Foreground="#FFD946EF" />
+                                                        <TextBlock Text="{Binding SelectedLandmark.Name}" FontSize="11" FontWeight="Bold" Foreground="#FFD946EF" />
+                                                        <TextBlock Text="  |  " FontSize="11" Foreground="DarkGray" />
                                                     </StackPanel>
 
                                                     <TextBlock Text="Az: " FontSize="11" Foreground="DarkGray" />

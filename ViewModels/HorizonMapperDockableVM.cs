@@ -86,8 +86,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
         private HorizonNode _syncRefNode = null;
         private bool _isSyncPreparing = false;
-        private HorizonNode _specialSyncNode = null;
-        private bool _isSpecialSyncNodeSelected = false;
+        private SyncLandmark _selectedLandmark = null;
 
         private bool _isMainCameraActive = false;
         private int _detectedStarCount = 0;
@@ -107,6 +106,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         private MountJogCommands _mountJogCommands;
 
         public ObservableCollection<HorizonNode> HorizonNodes { get; } = new ObservableCollection<HorizonNode>();
+        public ObservableCollection<SyncLandmark> SyncLandmarks { get; } = new ObservableCollection<SyncLandmark>();
 
         [ImportingConstructor]
         public HorizonMapperDockableVM(IProfileService profileService, ICameraMediator cameraMediator, ITelescopeMediator telescopeMediator, IImagingMediator imagingMediator) : base(profileService) {
@@ -624,28 +624,33 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             }
         }
 
-        public HorizonNode SpecialSyncNode {
-            get => _specialSyncNode;
+        public SyncLandmark SelectedLandmark {
+            get => _selectedLandmark;
             set {
-                _specialSyncNode = value;
-                if (_specialSyncNode == null) {
-                    _isSpecialSyncNodeSelected = false;
-                    RaisePropertyChanged(nameof(IsSpecialSyncNodeSelected));
+                if (_selectedLandmark != value) {
+                    if (_selectedLandmark != null) {
+                        _selectedLandmark.IsSelected = false;
+                    }
+                    _selectedLandmark = value;
+                    if (_selectedLandmark != null) {
+                        _selectedLandmark.IsSelected = true;
+                        _activeNodeIndex = -1;
+                        RaisePropertyChanged(nameof(ActiveNodeIndex));
+                    }
+                    RaisePropertyChanged(nameof(SelectedLandmark));
+                    RaisePropertyChanged(nameof(IsLandmarkSelected));
+                    RaisePropertyChanged(nameof(ActiveNode));
+                    RaisePropertyChanged(nameof(HasActiveNode));
+                    RaisePropertyChanged(nameof(CanPrepareSync));
+                    RaisePropertyChanged(nameof(ActiveNodeRadarX));
+                    RaisePropertyChanged(nameof(ActiveNodeRadarY));
+                    RaisePropertyChanged(nameof(CanDropPin));
                 }
-                RaisePropertyChanged(nameof(SpecialSyncNode));
-                RaisePropertyChanged(nameof(HasSpecialSyncNode));
-                RaisePropertyChanged(nameof(SpecialSyncNodeRadarX));
-                RaisePropertyChanged(nameof(SpecialSyncNodeRadarY));
-                RaisePropertyChanged(nameof(ActiveNode));
-                RaisePropertyChanged(nameof(HasActiveNode));
-                RaisePropertyChanged(nameof(CanPrepareSync));
             }
         }
 
-        public bool HasSpecialSyncNode => SpecialSyncNode != null;
-
-        public double SpecialSyncNodeRadarX => SpecialSyncNode?.RadarX ?? 250.0;
-        public double SpecialSyncNodeRadarY => SpecialSyncNode?.RadarY ?? 250.0;
+        public bool IsLandmarkSelected => SelectedLandmark != null;
+        public bool HasLandmarks => SyncLandmarks.Count > 0;
 
         public bool CanPrepareSync => HasActiveNode && !IsSyncPreparing && IsMountConnected;
         
@@ -807,8 +812,9 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 if (_activeNodeIndex != value) {
                     _activeNodeIndex = value;
                     if (_activeNodeIndex >= 0) {
-                        _isSpecialSyncNodeSelected = false;
-                        RaisePropertyChanged(nameof(IsSpecialSyncNodeSelected));
+                        _selectedLandmark = null;
+                        RaisePropertyChanged(nameof(SelectedLandmark));
+                        RaisePropertyChanged(nameof(IsLandmarkSelected));
                     }
                     RaisePropertyChanged(nameof(ActiveNodeIndex));
                     RaisePropertyChanged(nameof(ActiveNode));
@@ -821,30 +827,10 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             }
         }
 
-        public bool IsSpecialSyncNodeSelected {
-            get => _isSpecialSyncNodeSelected;
-            set {
-                if (_isSpecialSyncNodeSelected != value) {
-                    _isSpecialSyncNodeSelected = value;
-                    if (_isSpecialSyncNodeSelected) {
-                        _activeNodeIndex = -1;
-                        RaisePropertyChanged(nameof(ActiveNodeIndex));
-                    }
-                    RaisePropertyChanged(nameof(IsSpecialSyncNodeSelected));
-                    RaisePropertyChanged(nameof(ActiveNode));
-                    RaisePropertyChanged(nameof(ActiveNodeRadarX));
-                    RaisePropertyChanged(nameof(ActiveNodeRadarY));
-                    RaisePropertyChanged(nameof(HasActiveNode));
-                    RaisePropertyChanged(nameof(CanDropPin));
-                    RaisePropertyChanged(nameof(CanPrepareSync));
-                }
-            }
-        }
-
         public HorizonNode ActiveNode {
             get {
-                if (IsSpecialSyncNodeSelected) {
-                    return SpecialSyncNode;
+                if (SelectedLandmark != null) {
+                    return new HorizonNode(SelectedLandmark.Azimuth, SelectedLandmark.Altitude);
                 }
                 if (ActiveNodeIndex >= 0 && ActiveNodeIndex < HorizonNodes.Count) {
                     return HorizonNodes[ActiveNodeIndex];
@@ -1087,8 +1073,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             if (altitude < 0.0) altitude = 0.0;
             if (altitude > 90.0) altitude = 90.0;
 
-            if (SpecialSyncNode != null) {
-                double distToSpecial = GetAngularDistance(azimuth, altitude, SpecialSyncNode.Azimuth, SpecialSyncNode.Altitude);
+            foreach (var landmark in SyncLandmarks) {
+                double distToSpecial = GetAngularDistance(azimuth, altitude, landmark.Azimuth, landmark.Altitude);
                 if (distToSpecial < 2.5) {
                     return true;
                 }
@@ -1205,10 +1191,12 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public ICommand PrepareSyncCommand => _mappingCommands.PrepareSyncCommand;
         public ICommand ConfirmSyncCommand => _mappingCommands.ConfirmSyncCommand;
         public ICommand CancelSyncCommand => _mappingCommands.CancelSyncCommand;
-        public ICommand SetSpecialSyncNodeCommand => _mappingCommands.SetSpecialSyncNodeCommand;
-        public ICommand ClearSpecialSyncNodeCommand => _mappingCommands.ClearSpecialSyncNodeCommand;
-        public ICommand SlewToSpecialSyncNodeCommand => _mappingCommands.SlewToSpecialSyncNodeCommand;
-        public ICommand SelectSpecialSyncNodeCommand => _mappingCommands.SelectSpecialSyncNodeCommand;
+        public ICommand AddLandmarkCommand => _mappingCommands.AddLandmarkCommand;
+        public ICommand DeleteLandmarkCommand => _mappingCommands.DeleteLandmarkCommand;
+        public ICommand SlewToLandmarkCommand => _mappingCommands.SlewToLandmarkCommand;
+        public ICommand SelectLandmarkCommand => _mappingCommands.SelectLandmarkCommand;
+        public ICommand RenameLandmarkCommand => _mappingCommands.RenameLandmarkCommand;
+        public ICommand ClearAllLandmarksCommand => _mappingCommands.ClearAllLandmarksCommand;
 
         public ICommand SlewCCWCommand => _mappingCommands.SlewCCWCommand;
         public ICommand SlewCWCommand => _mappingCommands.SlewCWCommand;
@@ -1506,6 +1494,10 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             try { _settingsManager?.Dispose(); } catch { }
             try { _cameraMediator.RemoveConsumer(this); } catch { }
             try { _telescopeMediator.RemoveConsumer(this); } catch { }
+        }
+
+        public void NotifyPropertyChanged(string propertyName) {
+            RaisePropertyChanged(propertyName);
         }
 
         private static Brush CreateFrozenBrush(string hex) {
