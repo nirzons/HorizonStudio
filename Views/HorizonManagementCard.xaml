@@ -39,36 +39,114 @@
     </UserControl.Resources>
 
     <StackPanel Orientation="Vertical">
-        <!-- Row 3: Main Active Mapping Controls -->
-        <Grid Margin="0,0,0,12">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        
+        <!-- Section 1: Mount Jogging & Slewing -->
+        <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Mount Jogging &amp; Slewing" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                
+                <!-- 5x5 Directional Jogging Grid -->
+                <Grid Width="180" Height="150" HorizontalAlignment="Center">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-            <!-- Placed Node interactions -->
-            <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource ActionBtnStyle}" Content="Drop Horizon Pin [Spacebar]" Command="{Binding DropPinCommand}" Height="36" IsEnabled="{Binding CanDropPin}" Background="#3B82F6" Margin="0,0,0,6" />
-            
-            <Button Grid.Row="1" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Remove Current Pin" Command="{Binding DeletePointCommand}" Height="28" Background="#6B7280" Margin="0,0,4,6" FontSize="11" ToolTip="Remove the currently selected pin" />
-            <Button Grid.Row="1" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Clear All Pins" Command="{Binding ClearPinsCommand}" Height="28" Background="#E11D48" Margin="4,0,0,6" FontSize="11" ToolTip="Remove all horizon pins" />
+                    <!-- Row 0: Double-Arrow Diagonals & North -->
+                    <Button Grid.Row="0" Grid.Column="0" Content="↖↖" Command="{Binding DoubleJogNorthWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Alt++, Az--" FontSize="9" />
+                    <Button Grid.Row="0" Grid.Column="1" Content="▲▲◀" Command="{Binding JogN2W1Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Alt++, Az-" FontSize="9" />
+                    <Button Grid.Row="0" Grid.Column="2" Content="▲▲" Command="{Binding DoubleJogNorthCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Alt++" FontSize="9" />
+                    <Button Grid.Row="0" Grid.Column="3" Content="▲▲▶" Command="{Binding JogN2E1Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Alt++, Az+" FontSize="9" />
+                    <Button Grid.Row="0" Grid.Column="4" Content="↗↗" Command="{Binding DoubleJogNorthEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Alt++, Az++" FontSize="9" />
 
-            <!-- Save & Load Horizon Profile -->
-            <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Save Horizon Profile" Command="{Binding SaveHorizonCommand}" Height="34" Background="#F59E0B" Margin="0,0,4,0" ToolTip="Save the collected pins to a N.I.N.A. .hrz file" />
-                <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Load Horizon Profile" Command="{Binding LoadHorizonCommand}" Height="34" Background="#10B981" Margin="4,0,0,0" ToolTip="Load a N.I.N.A. .hrz profile" />
-            </Grid>
-        </Grid>
+                    <!-- Row 1: Single-Arrow Diagonals & North -->
+                    <Button Grid.Row="1" Grid.Column="0" Content="▼◀◀" Command="{Binding JogN1W2Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az--" FontSize="9" />
+                    <Button Grid.Row="1" Grid.Column="1" Content="↖" Command="{Binding JogNorthWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az-" />
+                    <Button Grid.Row="1" Grid.Column="2" Content="▲" Command="{Binding JogNorthCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt+" />
+                    <Button Grid.Row="1" Grid.Column="3" Content="↗" Command="{Binding JogNorthEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az+" />
+                    <Button Grid.Row="1" Grid.Column="4" Content="▼▶▶" Command="{Binding JogN1E2Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt+, Az++" FontSize="9" />
 
-        <!-- Row 4: Point Verification Panel -->
+                    <!-- Row 2: Double/Single West, Home, Single/Double East -->
+                    <Button Grid.Row="2" Grid.Column="0" Content="◀◀" Command="{Binding DoubleJogWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Az--" FontSize="9" />
+                    <Button Grid.Row="2" Grid.Column="1" Content="◀" Command="{Binding JogWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az-" />
+                    <Button Grid.Row="2" Grid.Column="2" Content="⌂" Command="{Binding HomeMountCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2563EB" ToolTip="Home Mount" FontSize="14" />
+                    <Button Grid.Row="2" Grid.Column="3" Content="▶" Command="{Binding JogEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Az+" />
+                    <Button Grid.Row="2" Grid.Column="4" Content="▶▶" Command="{Binding DoubleJogEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Az++" FontSize="9" />
+
+                    <!-- Row 3: Single-Arrow Diagonals & South -->
+                    <Button Grid.Row="3" Grid.Column="0" Content="▲◀◀" Command="{Binding JogS1W2Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az--" FontSize="9" />
+                    <Button Grid.Row="3" Grid.Column="1" Content="↙" Command="{Binding JogSouthWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az-" />
+                    <Button Grid.Row="3" Grid.Column="2" Content="▼" Command="{Binding JogSouthCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#4B5563" ToolTip="Alt-" />
+                    <Button Grid.Row="3" Grid.Column="3" Content="↘" Command="{Binding JogSouthEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az+" />
+                    <Button Grid.Row="3" Grid.Column="4" Content="▲▶▶" Command="{Binding JogS1E2Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#374151" ToolTip="Alt-, Az++" FontSize="9" />
+
+                    <!-- Row 4: Double-Arrow Diagonals & South -->
+                    <Button Grid.Row="4" Grid.Column="0" Content="↙↙" Command="{Binding DoubleJogSouthWestCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Alt--, Az--" FontSize="9" />
+                    <Button Grid.Row="4" Grid.Column="1" Content="▼▼◀" Command="{Binding JogS2W1Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Alt--, Az-" FontSize="9" />
+                    <Button Grid.Row="4" Grid.Column="2" Content="▼▼" Command="{Binding DoubleJogSouthCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#3A4350" ToolTip="Alt--" FontSize="9" />
+                    <Button Grid.Row="4" Grid.Column="3" Content="▼▼▶" Command="{Binding JogS2E1Command}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Alt--, Az+" FontSize="9" />
+                    <Button Grid.Row="4" Grid.Column="4" Content="↘↘" Command="{Binding DoubleJogSouthEastCommand}" IsEnabled="{Binding Radar.CanJog}" Style="{StaticResource ActionBtnStyle}" Background="#2B303C" ToolTip="Alt--, Az++" FontSize="9" />
+                </Grid>
+
+                <!-- Emergency Stop Button -->
+                <Button Command="{Binding StopMountCommand}" IsEnabled="{Binding IsMountConnected}" Style="{StaticResource ActionBtnStyle}" Background="#EF4444" Height="28" Margin="0,8,0,8" ToolTip="EMERGENCY JOG SLEW STOP">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🛑" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="EMERGENCY STOP" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Inline Step Sizes -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                        <TextBlock Text="↕ Jog Step Alt (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                        <TextBox Text="{Binding StepSizeAlt, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                        <TextBlock Text="↔ Jog Step Az (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                        <TextBox Text="{Binding StepSizeAz, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Section 2: Horizon Pin Placement -->
+        <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Horizon Pin Placement" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource ActionBtnStyle}" Content="Drop Horizon Pin [Spacebar]" Command="{Binding DropPinCommand}" Height="36" IsEnabled="{Binding CanDropPin}" Background="#3B82F6" Margin="0,0,0,6" />
+                    <Button Grid.Row="1" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Remove Current Pin" Command="{Binding DeletePointCommand}" Height="28" Background="#6B7280" Margin="0,0,4,0" FontSize="11" ToolTip="Remove the currently selected pin" />
+                    <Button Grid.Row="1" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Clear All Pins" Command="{Binding ClearPinsCommand}" Height="28" Background="#E11D48" Margin="4,0,0,0" FontSize="11" ToolTip="Remove all horizon pins" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Section 3: Point Verification Panel (Slew Back) -->
         <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="Point Verification (Slew Back)" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
@@ -87,8 +165,8 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="◀ Slew CCW" Command="{Binding SlewCCWCommand}" IsEnabled="{Binding Radar.CanVerifyPoints}" Height="28" Background="#4F46E5" Margin="0,0,4,8" FontSize="11" ToolTip="Slew Counter-Clockwise (Decreasing Azimuth)" />
-                    <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Slew CW ▶" Command="{Binding SlewCWCommand}" IsEnabled="{Binding Radar.CanVerifyPoints}" Height="28" Background="#4F46E5" Margin="4,0,0,8" FontSize="11" ToolTip="Slew Clockwise (Increasing Azimuth)" />
+                    <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="◀ Slew CCW" Command="{Binding SlewCCWCommand}" IsEnabled="{Binding Radar.CanVerifyPoints}" Height="28" Background="#4F46E5" Margin="0,0,4,8" FontSize="11" ToolTip="Slew Counter-Clockwise" />
+                    <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Slew CW ▶" Command="{Binding SlewCWCommand}" IsEnabled="{Binding Radar.CanVerifyPoints}" Height="28" Background="#4F46E5" Margin="4,0,0,8" FontSize="11" ToolTip="Slew Clockwise" />
 
                     <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                         <TextBlock Text="Verification Step Size:  " FontSize="11" Foreground="Gray" VerticalAlignment="Center" />
@@ -268,8 +346,8 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Prepare Sync" Command="{Binding PrepareSyncCommand}" Height="24" Background="#8B5CF6" Margin="0,0,4,0" FontSize="10.5" ToolTip="Prepare 3D Tilt Correction Sync for this node" />
-                                    <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Delete Node" Command="{Binding DeletePointCommand}" Height="24" Background="#EF4444" Margin="4,0,0,0" FontSize="10.5" ToolTip="Remove this node from active session" />
+                                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Prepare Sync" Command="{Binding PrepareSyncCommand}" Height="24" Background="#8B5CF6" Margin="0,0,4,0" FontSize="10.5" ToolTip="Prepare 3D Tilt Sync" />
+                                    <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Delete Node" Command="{Binding DeletePointCommand}" Height="24" Background="#EF4444" Margin="4,0,0,0" FontSize="10.5" ToolTip="Remove node" />
                                 </Grid>
                             </StackPanel>
 
@@ -296,7 +374,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Confirm Sync" Command="{Binding ConfirmSyncCommand}" IsEnabled="{Binding Landmark.CanConfirmSync}" Height="24" Background="#10B981" Margin="0,0,4,0" FontSize="10.5" ToolTip="Confirm 3D Tilt Correction (Mount must be jogged/moved from original target coordinates first)" />
+                                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Confirm Sync" Command="{Binding ConfirmSyncCommand}" IsEnabled="{Binding Landmark.CanConfirmSync}" Height="24" Background="#10B981" Margin="0,0,4,0" FontSize="10.5" ToolTip="Confirm 3D Tilt Correction" />
                                     <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Cancel" Command="{Binding CancelSyncCommand}" Height="24" Background="#6B7280" Margin="4,0,0,0" FontSize="10.5" ToolTip="Abort the synchronization process" />
                                 </Grid>
                             </StackPanel>
@@ -307,70 +385,81 @@
             </StackPanel>
         </Border>
 
-        <!-- Row 6: Hardware Parameters & Safety Checklist -->
-        <Grid Margin="0,0,0,8">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <!-- Manual step sizes -->
-            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,6">
-                <TextBlock Text="↕ Jog Step Alt (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
-                <TextBox Text="{Binding StepSizeAlt, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+        <!-- Section 4: Profile Storage -->
+        <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Profile Storage" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Save Horizon Profile" Command="{Binding SaveHorizonCommand}" Height="34" Background="#F59E0B" Margin="0,0,4,0" ToolTip="Save pins to .hrz" />
+                    <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Load Horizon Profile" Command="{Binding LoadHorizonCommand}" Height="34" Background="#10B981" Margin="4,0,0,0" ToolTip="Load .hrz file" />
+                </Grid>
             </StackPanel>
+        </Border>
 
-            <StackPanel Grid.Row="0" Grid.Column="1" Margin="4,0,4,6">
-                <TextBlock Text="↔ Jog Step Az (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
-                <TextBox Text="{Binding StepSizeAz, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+        <!-- Section 5: Hardware & Safety Settings -->
+        <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,8">
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Hardware &amp; Safety Settings" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                
+                <Grid Margin="0,0,0,8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="1*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Camera Rotation & Offset -->
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,6,6" ToolTip="Counter-rotates webcam for EQ mounts.">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                            <TextBlock Text="🔄 EQ Auto-Rotate" FontSize="9" Foreground="DarkGray" Margin="0,0,4,0" VerticalAlignment="Center" />
+                            <CheckBox IsChecked="{Binding Webcam.IsCounterRotationEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Slider Value="{Binding Webcam.CameraRotationOffset, UpdateSourceTrigger=PropertyChanged}" Minimum="-180" Maximum="180" TickFrequency="1" IsSnapToTickEnabled="True" Height="20" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Webcam.CameraRotationOffset, StringFormat=Offset: {0}°}" FontSize="9" Foreground="DarkGray" HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Field Rotation Angle Readout -->
+                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="6,0,0,6" ToolTip="Calculated Parallactic Angle">
+                        <TextBlock Text="Rot. Angle" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                        <Border CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Height="24" Padding="6,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Webcam.WebcamImageRotationAngle, StringFormat={}{0:F1}°}" FontSize="10" FontWeight="Bold" Foreground="#FF00F3FF" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Safety exclusions checklist -->
+                    <WrapPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,4,0,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,10,4" ToolTip="Proximity Lockout">
+                            <TextBlock Text="Solar Safety" Foreground="#FBBF24" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                            <CheckBox IsChecked="{Binding EnableSolarSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,10,4" ToolTip="Proximity Lockout">
+                            <TextBlock Text="Zenith Lock" Foreground="#FCA5A5" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                            <CheckBox IsChecked="{Binding EnableZenithSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,10,4" ToolTip="Lock Altitude">
+                            <TextBlock Text="Horiz. Lock" Foreground="#818CF8" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                            <CheckBox IsChecked="{Binding HorizonLockEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,10,4" ToolTip="Drift Countering">
+                            <TextBlock Text="🎯 Exact Pos." Foreground="#34D399" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                            <CheckBox IsChecked="{Binding IsExactPositionEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4" ToolTip="Radar Canvas Overlay">
+                            <TextBlock Text="📡 HUD Overlay" Foreground="#FFA07A" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
+                            <CheckBox IsChecked="{Binding IsRadarOverlayEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </WrapPanel>
+                </Grid>
             </StackPanel>
-
-            <!-- Camera Rotation & Offset -->
-            <StackPanel Grid.Row="0" Grid.Column="2" Margin="4,0,0,6" ToolTip="Counter-rotates the webcam view for EQ mounts. Use offset to level the horizon.">
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-                    <TextBlock Text="🔄 EQ Auto-Rotate" FontSize="9" Foreground="DarkGray" Margin="0,0,4,0" VerticalAlignment="Center" />
-                    <CheckBox IsChecked="{Binding Webcam.IsCounterRotationEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
-                </StackPanel>
-                <Slider Value="{Binding Webcam.CameraRotationOffset, UpdateSourceTrigger=PropertyChanged}" Minimum="-180" Maximum="180" TickFrequency="1" IsSnapToTickEnabled="True" Height="20" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding Webcam.CameraRotationOffset, StringFormat=Offset: {0}°}" FontSize="9" Foreground="DarkGray" HorizontalAlignment="Center" />
-            </StackPanel>
-
-            <!-- Safety exclusions checklist -->
-            <WrapPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,4,0,6" VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Margin="0,0,12,4" ToolTip="Enables/disables the 15° Solar proximity lockout.">
-                    <TextBlock Text="Solar Safety" Foreground="#FBBF24" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
-                    <CheckBox IsChecked="{Binding EnableSolarSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,12,4" ToolTip="Enables/disables the 85° Zenith proximity lockout.">
-                    <TextBlock Text="Zenith Lock" Foreground="#FCA5A5" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
-                    <CheckBox IsChecked="{Binding EnableZenithSafety, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,12,4" ToolTip="Locks altitude to Horizon only (Azimuth sweeps).">
-                    <TextBlock Text="Horiz. Lock" Foreground="#818CF8" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
-                    <CheckBox IsChecked="{Binding HorizonLockEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,12,4" ToolTip="Iteratively slews to counter sidereal drift and land exactly on target (Micro-Jump).">
-                    <TextBlock Text="🎯 Exact Pos." Foreground="#34D399" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
-                    <CheckBox IsChecked="{Binding IsExactPositionEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,4" ToolTip="Superimposes the transparent Sky Dome Radar grid over the Live webcam feed.">
-                    <TextBlock Text="📡 HUD Overlay" Foreground="#FFA07A" FontSize="9" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" />
-                    <CheckBox IsChecked="{Binding IsRadarOverlayEnabled, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" VerticalAlignment="Center" />
-                </StackPanel>
-            </WrapPanel>
-
-            <!-- Field rotation angle readout -->
-            <StackPanel Grid.Row="1" Grid.Column="2" Margin="4,4,0,6" ToolTip="Calculated Field Rotation Angle (Parallactic Angle)">
-                <TextBlock Text="Rot. Angle" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
-                <Border CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Height="24" Padding="6,0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Webcam.WebcamImageRotationAngle, StringFormat={}{0:F1}°}" FontSize="10" FontWeight="Bold" Foreground="#FF00F3FF" VerticalAlignment="Center" HorizontalAlignment="Center" />
-                </Border>
-            </StackPanel>
-        </Grid>
+        </Border>
+        
     </StackPanel>
 </UserControl>
