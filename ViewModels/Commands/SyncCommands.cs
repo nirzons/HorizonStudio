@@ -74,15 +74,36 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             double deltaAlt = currentAlt - syncRefAlt;
 
+            double angularDistance = AstronomyHelper.GetAngularDistance(syncRefAz, syncRefAlt, currentAz, currentAlt);
+            
+            string message;
+            string title;
+            System.Windows.MessageBoxImage icon;
+
+            if (angularDistance > 5.0) {
+                message = $"🚨 CRITICAL WARNING: The calculated 3D Tilt Correction offset is {angularDistance:F2}°, which is exceptionally large and exceeds the safe limit of 5.0°!\n\n" +
+                          "This usually indicates that the wrong landmark has been centered, or that the mount setup is highly misaligned. Slewing with an incorrect horizon model can lead to equipment collisions or tracking failures.\n\n" +
+                          $"Reference Node Original: Alt {syncRefAlt:F2}°, Az {syncRefAz:F2}°\n" +
+                          $"Mount Current Position: Alt {currentAlt:F2}°, Az {currentAz:F2}°\n" +
+                          $"Offset to Apply: ΔAlt = {deltaAlt:F3}°, ΔAz = {deltaAz:F3}°\n\n" +
+                          "Are you ABSOLUTELY SURE you want to force this warp profile sync?";
+                title = "🚨 DANGER: LARGE TILT OFFSET DETECTED";
+                icon = System.Windows.MessageBoxImage.Error;
+            } else {
+                message = $"Warning: This will shift and warp all {_vm.HorizonNodes.Count} points in the current profile using 3D Tilt Correction to correct for mount tilt or alignment errors.\n\n" +
+                          $"Reference Node Original: Alt {syncRefAlt:F2}°, Az {syncRefAz:F2}°\n" +
+                          $"Mount Current Position: Alt {currentAlt:F2}°, Az {currentAz:F2}°\n" +
+                          $"Offset to Apply: ΔAlt = {deltaAlt:F3}°, ΔAz = {deltaAz:F3}°\n\n" +
+                          "Are you sure you want to warp the entire profile?";
+                title = "Confirm Profile 3D Tilt Correction Sync";
+                icon = System.Windows.MessageBoxImage.Warning;
+            }
+
             var result = System.Windows.MessageBox.Show(
-                $"Warning: This will shift and warp all {_vm.HorizonNodes.Count} points in the current profile using 3D Tilt Correction to correct for mount tilt or alignment errors.\n\n" +
-                $"Reference Node Original: Alt {syncRefAlt:F2}°, Az {syncRefAz:F2}°\n" +
-                $"Mount Current Position: Alt {currentAlt:F2}°, Az {currentAz:F2}°\n" +
-                $"Offset to Apply: ΔAlt = {deltaAlt:F3}°, ΔAz = {deltaAz:F3}°\n\n" +
-                "Are you sure you want to warp the entire profile?",
-                "Confirm Profile 3D Tilt Correction Sync",
+                message,
+                title,
                 System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Warning
+                icon
             );
 
             if (result != System.Windows.MessageBoxResult.Yes) {
@@ -174,6 +195,9 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
                 _vm.NodeCount = _vm.HorizonNodes.Count;
 
+                _vm.IsSyncPreparing = false;
+                _vm.SyncRefNode = null;
+
                 if (newSyncRefNode != null) {
                     _vm.ActiveNodeIndex = sortedWarpedList.IndexOf(newSyncRefNode);
                 } else {
@@ -186,9 +210,6 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     _vm.LastNodeAz = top.Azimuth;
                     _vm.LastNodeText = top.ToString();
                 }
-
-                _vm.IsSyncPreparing = false;
-                _vm.SyncRefNode = null;
 
                 _vm.Log($"[Profile Sync] Profile successfully warped! Applied ΔAlt = {deltaAlt:F3}°, ΔAz = {deltaAz:F3}° across all {_vm.NodeCount} points using 3D cosine-tilt correction.");
                 global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"Profile successfully warped using 3D Tilt Correction!");

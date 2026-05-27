@@ -12,6 +12,7 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 * **Circular Eyepiece View:** Rotates and crops the live camera feed into a clean circular telescope eyepiece view, hiding tilted black borders during mount tracking.
 * **AR HUD Overlay:** Superimposes a transparent Sky Dome Radar grid, card directions, the mapped horizon line, and mount position directly over the live camera feed.
 * **Click-to-Slew:** Double-click near the horizon overlay line on the video feed to automatically slew your mount to that position.
+* **Active Point HUD:** A high-contrast, translucent panel in the top-left corner dynamically overlays the name and coordinates (Alt/Az) of your currently selected pin or landmark, keeping important telemetry always in view.
 
 ### 📷 Main Camera Integration
 * **Live Main Camera Feed:** Use your primary imaging camera as the video source instead of (or alongside) a webcam, with full N.I.N.A. equipment integration via `IImagingMediator`.
@@ -27,9 +28,10 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 ### 🗺️ Interactive Sky Dome Radar
 * **Shaded Obstruction Zone:** Displays a smooth, shaded representation of your blocked low-altitude sky.
 * **Radar Slewing:** Click anywhere on the radar view to slew the mount to that sky position. Clicking near a saved node snaps selection to it.
+* **Active Point HUD:** Displays the name and exact Alt/Az coordinates of your active selection in the top-left corner.
 
 ### 🕹️ Verification & Traversal
-* **Traversal Controls:** Step through your saved horizon nodes clockwise (`Slew CW ▶`) or counter-clockwise (`◀ Slew CCW`) to physically verify that your mapping is accurate.
+* **Traversal Controls:** Step through both your saved horizon nodes and terrestrial landmarks clockwise (`Slew CW ▶`) or counter-clockwise (`◀ Slew CCW`) by physical azimuth proximity, automatically updating the active selection.
 * **Safety Safeguards:** Disables jogging and traversal controls during active slews, and prompts for confirmation before performing any large azimuth moves (> 45°).
 
 ### 🛠️ Horizon Pin Management
@@ -69,7 +71,7 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 * **Load Profile:** Click **Load Horizon Profile** to load a previously saved `.hrz` file.
 * **Add/Modify Pins:** Slew to any area and click **Drop Pin** to add new nodes.
 * **Delete Pins:** Click a node on the radar to select it, then click **Delete Node** to remove it.
-* **Verify Coords:** Click `◀ Slew CCW` or `Slew CW ▶` to step through your mapped nodes, verifying that the telescope points clear of physical obstructions.
+* **Verify Coords:** Click `◀ Slew CCW` or `Slew CW ▶` to step through both your mapped nodes and landmarks by physical azimuth proximity, verifying that the telescope points clear of physical obstructions.
 
 ---
 

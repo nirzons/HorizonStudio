@@ -16,6 +16,10 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             get => _selectedLandmark;
             set {
                 if (_selectedLandmark != value) {
+                    if (_parent != null && _parent.IsSyncPreparing) {
+                        RaisePropertyChanged(nameof(SelectedLandmark));
+                        return;
+                    }
                     if (_selectedLandmark != null) {
                         _selectedLandmark.IsSelected = false;
                     }
@@ -46,14 +50,47 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             }
         }
 
+        public string SyncBannerBackground {
+            get {
+                if (_parent.IsSyncPreparing && _parent.SyncRefNode != null) {
+                    double dist = AstronomyHelper.GetAngularDistance(_parent.CurrentAz, _parent.CurrentAlt, _parent.SyncRefNode.Azimuth, _parent.SyncRefNode.Altitude);
+                    if (dist > 5.0) return "#3D1C1C"; // Alarming Red
+                }
+                return "#1E1B4B"; // Standard Deep Indigo
+            }
+        }
+
+        public string SyncBannerBorderBrush {
+            get {
+                if (_parent.IsSyncPreparing && _parent.SyncRefNode != null) {
+                    double dist = AstronomyHelper.GetAngularDistance(_parent.CurrentAz, _parent.CurrentAlt, _parent.SyncRefNode.Azimuth, _parent.SyncRefNode.Altitude);
+                    if (dist > 5.0) return "#EF4444"; // Alarming Bright Red
+                }
+                return "#4338CA"; // Standard Indigo
+            }
+        }
+
+        public string SyncBannerForeground {
+            get {
+                if (_parent.IsSyncPreparing && _parent.SyncRefNode != null) {
+                    double dist = AstronomyHelper.GetAngularDistance(_parent.CurrentAz, _parent.CurrentAlt, _parent.SyncRefNode.Azimuth, _parent.SyncRefNode.Altitude);
+                    if (dist > 5.0) return "#FFE0E0"; // Light Red/White
+                }
+                return "#FFE0E7FF"; // Standard White/Indigo
+            }
+        }
+
         public string SyncInstructionText {
             get {
-                if (_parent.SyncRefNode == null) return "⚠️ Sync Mode: Jog mount to center landmark in feed, then click Confirm.";
+                if (_parent.SyncRefNode == null) return "⚠️ Sync Mode: Jog mount to center the landmark on the webcam crosshairs, then click Confirm.";
                 double dist = AstronomyHelper.GetAngularDistance(_parent.CurrentAz, _parent.CurrentAlt, _parent.SyncRefNode.Azimuth, _parent.SyncRefNode.Altitude);
                 if (dist < 0.05) {
-                    return "⚠️ Sync Mode: Jog mount to center landmark in feed (Confirm will enable once mount has moved).";
+                    return "⚠️ Sync Mode: Jog mount to center the landmark on the webcam crosshairs (Confirm will enable once mount has moved).";
                 }
-                return "⚠️ Sync Mode: Landmark centered in feed. Click Confirm Sync to warp profile.";
+                if (dist > 5.0) {
+                    return $"🚨 DANGER: Position offset ({dist:F2}°) exceeds safe limit of 5.0°! Check if the correct landmark is centered.";
+                }
+                return "⚠️ Sync Mode: Landmark centered on webcam crosshairs. Click Confirm Sync to warp profile.";
             }
         }
 
@@ -65,6 +102,9 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             RaisePropertyChanged(nameof(CanPrepareSync));
             RaisePropertyChanged(nameof(CanConfirmSync));
             RaisePropertyChanged(nameof(SyncInstructionText));
+            RaisePropertyChanged(nameof(SyncBannerBackground));
+            RaisePropertyChanged(nameof(SyncBannerBorderBrush));
+            RaisePropertyChanged(nameof(SyncBannerForeground));
         }
 
         public void NotifyLandmarksCollectionChanged() {

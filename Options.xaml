@@ -140,7 +140,6 @@
                         <StackPanel Orientation="Vertical">
                             <views:CameraConfigCard DataContext="{Binding}" />
                             <views:HorizonManagementCard DataContext="{Binding}" />
-                            <views:LandmarkManagementCard DataContext="{Binding Landmark}" />
                             
                             <!-- Row 7: Log console feeds -->
                             <Border CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,4,0,4">

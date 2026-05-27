@@ -285,6 +285,10 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             get => _activeNodeIndex;
             set {
                 if (_activeNodeIndex != value) {
+                    if (IsSyncPreparing) {
+                        RaisePropertyChanged(nameof(ActiveNodeIndex));
+                        return;
+                    }
                     _activeNodeIndex = value;
                     if (_activeNodeIndex >= 0) {
                         SelectedLandmark = null;
@@ -292,6 +296,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                     RaisePropertyChanged(nameof(ActiveNodeIndex));
                     RaisePropertyChanged(nameof(ActiveNode));
                     RaisePropertyChanged(nameof(HasActiveNode));
+                    RaisePropertyChanged(nameof(ActiveNodeName));
+                    RaisePropertyChanged(nameof(ActiveNodeAltAz));
                     Radar?.NotifyActiveNodeChanged();
                     Landmark?.NotifyParentPropertiesChanged();
                 }
@@ -311,6 +317,28 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         }
 
         public bool HasActiveNode => ActiveNode != null;
+
+        public string ActiveNodeName {
+            get {
+                if (SelectedLandmark != null) {
+                    return SelectedLandmark.Name;
+                }
+                if (ActiveNodeIndex >= 0 && ActiveNodeIndex < HorizonNodes.Count) {
+                    return $"Horizon Pin #{ActiveNodeIndex + 1}";
+                }
+                return null;
+            }
+        }
+
+        public string ActiveNodeAltAz {
+            get {
+                var node = ActiveNode;
+                if (node != null) {
+                    return $"Alt: {node.Altitude:F2}°, Az: {node.Azimuth:F2}°";
+                }
+                return null;
+            }
+        }
 
         public bool IsActionSlewing {
             get => _isActionSlewing;
@@ -349,6 +377,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             RaisePropertyChanged(nameof(IsLandmarkSelected));
             RaisePropertyChanged(nameof(ActiveNode));
             RaisePropertyChanged(nameof(HasActiveNode));
+            RaisePropertyChanged(nameof(ActiveNodeName));
+            RaisePropertyChanged(nameof(ActiveNodeAltAz));
             Radar?.NotifyActiveNodeChanged();
             Landmark?.NotifyParentPropertiesChanged();
         }

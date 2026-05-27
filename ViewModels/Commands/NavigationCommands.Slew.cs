@@ -6,34 +6,63 @@ using NirZonshine.NINA.HorizonStudio.Services;
 
 namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
     public partial class NavigationCommands {
-        public void SlewCCW() {
-            int count = _vm.HorizonNodes.Count;
-            if (count == 0) return;
+        private class SlewTarget {
+            public double Azimuth { get; }
+            public double Altitude { get; }
+            public HorizonNode Node { get; }
+            public SyncLandmark Landmark { get; }
 
-            double currentAz = _vm.CurrentAz;
-            int currentIndex = _vm.ActiveNodeIndex;
-            int ccwIndex;
-            if (currentIndex == -1) {
-                int closestIndex = GetClosestNodeIndex(currentAz);
-                if (closestIndex != -1) {
-                    double diff = Math.Abs(currentAz - _vm.HorizonNodes[closestIndex].Azimuth) % 360.0;
-                    double dist = diff > 180.0 ? 360.0 - diff : diff;
-                    if (dist < 1.0) {
-                        ccwIndex = (closestIndex - _vm.VerificationStepSize) % count;
-                        if (ccwIndex < 0) ccwIndex += count;
-                    } else {
-                        ccwIndex = closestIndex;
-                    }
-                } else {
-                    ccwIndex = count - 1;
-                }
-            } else {
-                ccwIndex = (currentIndex - _vm.VerificationStepSize) % count;
-                if (ccwIndex < 0) ccwIndex += count;
+            public SlewTarget(HorizonNode node) {
+                Azimuth = node.Azimuth;
+                Altitude = node.Altitude;
+                Node = node;
             }
 
-            var targetNode = _vm.HorizonNodes[ccwIndex];
-            double targetAz = targetNode.Azimuth;
+            public SlewTarget(SyncLandmark landmark) {
+                Azimuth = landmark.Azimuth;
+                Altitude = landmark.Altitude;
+                Landmark = landmark;
+            }
+        }
+
+        public void SlewCCW() {
+            var targets = new System.Collections.Generic.List<SlewTarget>();
+            foreach (var node in _vm.HorizonNodes) {
+                targets.Add(new SlewTarget(node));
+            }
+            foreach (var landmark in _vm.SyncLandmarks) {
+                targets.Add(new SlewTarget(landmark));
+            }
+
+            int count = targets.Count;
+            if (count == 0) return;
+
+            // Sort targets by Azimuth
+            targets.Sort((a, b) => a.Azimuth.CompareTo(b.Azimuth));
+
+            double currentAz = _vm.CurrentAz;
+            int closestIndex = -1;
+            double minDistance = 360.0;
+
+            for (int i = 0; i < count; i++) {
+                double diff = Math.Abs(currentAz - targets[i].Azimuth) % 360.0;
+                double dist = diff > 180.0 ? 360.0 - diff : diff;
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestIndex = i;
+                }
+            }
+
+            int ccwIndex;
+            if (minDistance < 1.0) {
+                ccwIndex = (closestIndex - _vm.VerificationStepSize) % count;
+                if (ccwIndex < 0) ccwIndex += count;
+            } else {
+                ccwIndex = closestIndex;
+            }
+
+            var target = targets[ccwIndex];
+            double targetAz = target.Azimuth;
             double diffSlew = Math.Abs(currentAz - targetAz) % 360.0;
             double deltaAz = diffSlew > 180.0 ? 360.0 - diffSlew : diffSlew;
 
@@ -51,36 +80,51 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 }
             }
 
-            _vm.ActiveNodeIndex = ccwIndex;
+            if (target.Landmark != null) {
+                _vm.SelectedLandmark = target.Landmark;
+            } else {
+                _vm.ActiveNodeIndex = _vm.HorizonNodes.IndexOf(target.Node);
+            }
             SlewToActiveNode();
         }
 
         public void SlewCW() {
-            int count = _vm.HorizonNodes.Count;
-            if (count == 0) return;
-
-            double currentAz = _vm.CurrentAz;
-            int currentIndex = _vm.ActiveNodeIndex;
-            int cwIndex;
-            if (currentIndex == -1) {
-                int closestIndex = GetClosestNodeIndex(currentAz);
-                if (closestIndex != -1) {
-                    double diff = Math.Abs(currentAz - _vm.HorizonNodes[closestIndex].Azimuth) % 360.0;
-                    double dist = diff > 180.0 ? 360.0 - diff : diff;
-                    if (dist < 1.0) {
-                        cwIndex = (closestIndex + _vm.VerificationStepSize) % count;
-                    } else {
-                        cwIndex = closestIndex;
-                    }
-                } else {
-                    cwIndex = 0;
-                }
-            } else {
-                cwIndex = (currentIndex + _vm.VerificationStepSize) % count;
+            var targets = new System.Collections.Generic.List<SlewTarget>();
+            foreach (var node in _vm.HorizonNodes) {
+                targets.Add(new SlewTarget(node));
+            }
+            foreach (var landmark in _vm.SyncLandmarks) {
+                targets.Add(new SlewTarget(landmark));
             }
 
-            var targetNode = _vm.HorizonNodes[cwIndex];
-            double targetAz = targetNode.Azimuth;
+            int count = targets.Count;
+            if (count == 0) return;
+
+            // Sort targets by Azimuth
+            targets.Sort((a, b) => a.Azimuth.CompareTo(b.Azimuth));
+
+            double currentAz = _vm.CurrentAz;
+            int closestIndex = -1;
+            double minDistance = 360.0;
+
+            for (int i = 0; i < count; i++) {
+                double diff = Math.Abs(currentAz - targets[i].Azimuth) % 360.0;
+                double dist = diff > 180.0 ? 360.0 - diff : diff;
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestIndex = i;
+                }
+            }
+
+            int cwIndex;
+            if (minDistance < 1.0) {
+                cwIndex = (closestIndex + _vm.VerificationStepSize) % count;
+            } else {
+                cwIndex = closestIndex;
+            }
+
+            var target = targets[cwIndex];
+            double targetAz = target.Azimuth;
             double diffSlew = Math.Abs(currentAz - targetAz) % 360.0;
             double deltaAz = diffSlew > 180.0 ? 360.0 - diffSlew : diffSlew;
 
@@ -98,7 +142,11 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 }
             }
 
-            _vm.ActiveNodeIndex = cwIndex;
+            if (target.Landmark != null) {
+                _vm.SelectedLandmark = target.Landmark;
+            } else {
+                _vm.ActiveNodeIndex = _vm.HorizonNodes.IndexOf(target.Node);
+            }
             SlewToActiveNode();
         }
 
@@ -232,7 +280,9 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             double targetAz;
 
             if (snappedLandmark != null) {
-                _vm.SelectedLandmark = snappedLandmark;
+                if (!_vm.IsSyncPreparing) {
+                    _vm.SelectedLandmark = snappedLandmark;
+                }
                 targetAlt = snappedLandmark.Altitude;
                 targetAz = snappedLandmark.Azimuth;
                 _vm.Log($"[Radar Click] Snapped to Sync Landmark '{snappedLandmark.Name}' - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
@@ -257,13 +307,17 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 }
 
                 if (snappedIndex != -1) {
-                    _vm.ActiveNodeIndex = snappedIndex;
+                    if (!_vm.IsSyncPreparing) {
+                        _vm.ActiveNodeIndex = snappedIndex;
+                    }
                     var snappedNode = _vm.HorizonNodes[snappedIndex];
                     targetAlt = snappedNode.Altitude;
                     targetAz = snappedNode.Azimuth;
                     _vm.Log($"[Radar Click] Snapped to existing Horizon Node at index {snappedIndex} - Alt: {targetAlt:F2}°, Az: {targetAz:F2}°");
                 } else {
-                    _vm.ActiveNodeIndex = -1;
+                    if (!_vm.IsSyncPreparing) {
+                        _vm.ActiveNodeIndex = -1;
+                    }
                     if (_vm.HorizonNodes.Count == 0) {
                         targetAlt = _vm.CurrentAlt;
                         _vm.Log($"[Radar Click] Clicked radar with 0 nodes. Maintaining current altitude - Alt: {targetAlt:F2}°, Az: {azimuth:F2}°");

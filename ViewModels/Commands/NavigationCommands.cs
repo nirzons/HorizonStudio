@@ -30,13 +30,13 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             StartMappingCommand = new RelayCommand(o => StartMapping());
             StopMappingCommand = new RelayCommand(o => StopMapping());
-            DropPinCommand = new RelayCommand(o => DropPin());
-            UndoPinCommand = new RelayCommand(o => UndoPin());
-            ClearPinsCommand = new RelayCommand(o => ClearPins());
-            DeletePointCommand = new RelayCommand(o => DeletePoint(), o => _vm.HasActiveNode);
+            DropPinCommand = new RelayCommand(o => DropPin(), o => !_vm.IsSyncPreparing);
+            UndoPinCommand = new RelayCommand(o => UndoPin(), o => !_vm.IsSyncPreparing);
+            ClearPinsCommand = new RelayCommand(o => ClearPins(), o => !_vm.IsSyncPreparing);
+            DeletePointCommand = new RelayCommand(o => DeletePoint(), o => _vm.HasActiveNode && !_vm.IsSyncPreparing);
 
-            SlewCCWCommand = new RelayCommand(o => SlewCCW());
-            SlewCWCommand = new RelayCommand(o => SlewCW());
+            SlewCCWCommand = new RelayCommand(o => SlewCCW(), o => _vm.Radar != null && _vm.Radar.CanVerifyPoints);
+            SlewCWCommand = new RelayCommand(o => SlewCW(), o => _vm.Radar != null && _vm.Radar.CanVerifyPoints);
         }
     }
 }

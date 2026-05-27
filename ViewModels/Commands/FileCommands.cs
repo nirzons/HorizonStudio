@@ -20,8 +20,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             _vm = vm ?? throw new ArgumentNullException(nameof(vm));
             _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
 
-            SaveHorizonCommand = new RelayCommand(o => SaveHorizon());
-            LoadHorizonCommand = new RelayCommand(o => LoadHorizon());
+            SaveHorizonCommand = new RelayCommand(o => SaveHorizon(), o => !_vm.IsSyncPreparing);
+            LoadHorizonCommand = new RelayCommand(o => LoadHorizon(), o => !_vm.IsSyncPreparing);
         }
 
         public void SaveHorizon() {
@@ -164,7 +164,6 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     }
 
                     if (_vm.SyncLandmarks.Count > 0) {
-                        _vm.SelectedLandmark = _vm.SyncLandmarks[0];
                         _vm.NotifyPropertyChanged("HasLandmarks");
                         _vm.Landmark?.NotifyLandmarksCollectionChanged();
                     }

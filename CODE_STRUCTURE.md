@@ -21,9 +21,7 @@ graph TD
         OptionsXAML["Options.xaml (Main Hub)"]
         OptionsXAML --> HUDView["HUDOverlayView.xaml (Video HUD)"]
         OptionsXAML --> RadarView["SkyDomeRadarView.xaml (2D Canvas)"]
-        OptionsXAML --> LandmarkCard["LandmarkManagementCard.xaml (Landmarks List)"]
-        OptionsXAML --> HorizonCard["HorizonManagementCard.xaml (Horizon Pins)"]
-        OptionsXAML --> JoggingCard["JoggingCard.xaml (Mount Jogging)"]
+        OptionsXAML --> HorizonCard["HorizonManagementCard.xaml (Unified Sidebar Controls)"]
     end
 
     subgraph ViewModel Layer (Composed VMs)
@@ -100,16 +98,14 @@ Horizon Studio/
 │       ├── MountJogCommands.cs    # Step jogging and settling settle micro-jumps
 │       ├── NavigationCommands.cs  # Pin tracking and click-slewing base
 │       ├── NavigationCommands.Mapping.cs # Mapping session, Pin drop/undo stack
-│       ├── NavigationCommands.Slew.cs    # TRAVERSAL slews (CW/CCW) & canvas clicks
+│       ├── NavigationCommands.Slew.cs    # TRAVERSAL slews (CW/CCW by Azimuth proximity) & canvas clicks
 │       └── RenameDialog.cs        # Static WPF overlay dialog for naming landmarks
 │
 ├── Views/                          # WPF UserControl View Components
 │   ├── CameraConfigCard.xaml      # Left panel: Feed choice, Exposure settings
-│   ├── HUDOverlayView.xaml        # Center panel: Circular webcam feed & canvas HUD
-│   ├── SkyDomeRadarView.xaml      # Center panel: 2D polar projection of obstructions
-│   ├── HorizonManagementCard.xaml # Right panel: Pins table, CCW/CW, export options
-│   ├── LandmarkManagementCard.xaml # Right panel: Landmarks checklist, Slew, Rename
-│   └── JoggingCard.xaml           # Right panel: 8-direction Alt/Az keypad controls
+│   ├── HUDOverlayView.xaml        # Center panel: Circular webcam feed & canvas HUD (with Active Point HUD)
+│   ├── SkyDomeRadarView.xaml      # Center panel: 2D polar projection of obstructions (with Active Point HUD)
+│   └── HorizonManagementCard.xaml # Right panel: Unified Sidebar Card (Pins table, CCW/CW, Jogging, Landmarks)
 │
 └── Options.xaml                    # ROOT Dictionary merging views in NINA Workspace
 ```
@@ -120,8 +116,9 @@ Horizon Studio/
 
 ### 1. View Layer (`/Views`)
 Rather than relying on a giant monolithic interface, the UI is split into visual cards.
-* **`HUDOverlayView`**: Custom-clips the video feed into a circular telescope eyepiece. Projects coordinate lines, co-alignment targets, fuchsia landmark diamonds, and active nodes directly onto the live feed. It automatically translates layout clicks to UniformToFill image ratios.
-* **`SkyDomeRadarView`**: Draws a polar map canvas. Fills blocked sky directions in semi-transparent cyan, maps nodes into orange dots, and draws a red crosshair representing the active telescope position.
+* **`HUDOverlayView`**: Custom-clips the video feed into a circular telescope eyepiece. Projects coordinate lines, co-alignment targets, fuchsia landmark diamonds, and active nodes directly onto the live feed. It automatically translates layout clicks to UniformToFill image ratios. Includes a top-left **Active Point HUD panel** displaying current selection coordinates.
+* **`SkyDomeRadarView`**: Draws a polar map canvas. Fills blocked sky directions in semi-transparent cyan, maps nodes into orange dots, and draws a red crosshair representing the active telescope position. Includes a top-left **Active Point HUD panel** displaying selection name and coordinates.
+* **`HorizonManagementCard`**: A unified, comprehensive sidebar panel housing step-size selections, profile load/save, a 5x5 Virtual Jog Grid, direct azimuth verification slews, pin drop controls, and sync landmarks management.
 * **`Options.xaml`**: Merges all cards together, binding them explicitly to their corresponding sub-ViewModel data contexts.
 
 ### 2. ViewModel Layer (`/ViewModels`)
