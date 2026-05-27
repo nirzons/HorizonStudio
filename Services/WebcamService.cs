@@ -87,8 +87,20 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
                     throw new InvalidOperationException($"Webcam with path '{devicePath}' was not found.");
                 }
 
-                // Choose a characteristic (resolution/format) - first valid non-unknown format
+                // Log all available characteristics to see what DroidCam (and other cameras) support
+                foreach (var c in descriptor.Characteristics) {
+                    Logger.Info($"[Horizon Studio] Webcam '{descriptor.Name}' offers format: {c.Width}x{c.Height}, {c.PixelFormat}");
+                }
+
+                // Choose a characteristic (resolution/format) - prioritize standard resolutions (720p, then 1080p) 
+                // and standard formats, avoiding massive 2K/4K resolutions that crash virtual channels or free-version limits.
                 var characteristics = descriptor.Characteristics
+                    .OrderByDescending(c => c.Width == 1280 && c.Height == 720)
+                    .ThenByDescending(c => c.Width == 1920 && c.Height == 1080)
+                    .ThenByDescending(c => c.PixelFormat.ToString().Contains("JPEG", StringComparison.OrdinalIgnoreCase) || 
+                                        c.PixelFormat.ToString().Contains("MJPEG", StringComparison.OrdinalIgnoreCase))
+                    .ThenByDescending(c => c.PixelFormat.ToString().Contains("YUY", StringComparison.OrdinalIgnoreCase))
+                    .ThenByDescending(c => c.Width <= 1920)
                     .FirstOrDefault(c => c.PixelFormat != PixelFormats.Unknown);
 
                 if (characteristics == null) {
