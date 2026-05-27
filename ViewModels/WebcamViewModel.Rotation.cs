@@ -19,13 +19,19 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             if (IsCounterRotationEnabled) {
                 try {
                     double lat = _parent.TelescopeMediator.GetInfo()?.SiteLatitude ?? _parent.ProfileService?.ActiveProfile?.AstrometrySettings?.Latitude ?? 0.0;
-                    double altRad = _parent.CurrentAlt * Math.PI / 180.0;
-                    double azRad = _parent.CurrentAz * Math.PI / 180.0;
                     double latRad = lat * Math.PI / 180.0;
 
-                    double yHA = -Math.Sin(azRad) * Math.Cos(altRad);
-                    double xHA = Math.Sin(altRad) * Math.Cos(latRad) - Math.Cos(altRad) * Math.Sin(latRad) * Math.Cos(azRad);
-                    double haDeg = Math.Atan2(yHA, xHA) * 180.0 / Math.PI;
+                    // Retrieve Right Ascension, Declination and Sidereal Time (LST) from the mount
+                    double ra = _parent.TelescopeInfo?.RightAscension ?? 0.0;
+                    double dec = _parent.TelescopeInfo?.Declination ?? 0.0;
+                    double lst = _parent.TelescopeInfo?.SiderealTime ?? 0.0;
+
+                    // Calculate the Hour Angle (ha = LST - RA) in degrees, normalized to [-180, 180]
+                    double haDeg = (lst - ra) * 15.0;
+                    haDeg = (haDeg % 360.0 + 360.0) % 360.0;
+                    if (haDeg > 180.0) {
+                        haDeg -= 360.0;
+                    }
 
                     bool isPointingEast = false;
                     var side = _parent.TelescopeInfo?.SideOfPier;
@@ -43,8 +49,13 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                         isPointingEast = (haDeg < -0.1);
                     }
 
-                    double yQ = Math.Sin(azRad);
-                    double xQ = Math.Cos(altRad) * Math.Tan(latRad) - Math.Sin(altRad) * Math.Cos(azRad);
+                    // Compute the parallactic angle q using the Hour Angle-based formula to avoid the Alt/Az polar singularity.
+                    // y = -sin(h), x = cos(dec)*tan(lat) - sin(dec)*cos(h)
+                    double decRad = dec * Math.PI / 180.0;
+                    double haRad = haDeg * Math.PI / 180.0;
+
+                    double yQ = -Math.Sin(haRad);
+                    double xQ = Math.Cos(decRad) * Math.Tan(latRad) - Math.Sin(decRad) * Math.Cos(haRad);
                     double qDeg = Math.Atan2(yQ, xQ) * 180.0 / Math.PI;
 
                     totalRotation -= qDeg;

@@ -5,10 +5,6 @@
     xmlns:local="clr-namespace:NirZonshine.NINA.HorizonStudio"
     xmlns:views="clr-namespace:NirZonshine.NINA.HorizonStudio.Views">
 
-    <UserControl.InputBindings>
-        <KeyBinding Key="Space" Command="{Binding DropPinCommand}" />
-    </UserControl.InputBindings>
-
     <UserControl.Resources>
         <Style x:Key="ActionBtnStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White" />
@@ -243,7 +239,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource ActionBtnStyle}" Content="Drop Horizon Pin [Spacebar]" Command="{Binding DropPinCommand}" Height="36" IsEnabled="{Binding CanDropPin}" Background="#3B82F6" Margin="0,0,0,6" />
+                    <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource ActionBtnStyle}" Content="Drop Horizon Pin" Command="{Binding DropPinCommand}" Height="36" IsEnabled="{Binding CanDropPin}" Background="#3B82F6" Margin="0,0,0,6" />
                     <Button Grid.Row="1" Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Remove Current Pin" Command="{Binding DeletePointCommand}" Height="28" Background="#6B7280" Margin="0,0,4,0" FontSize="11" ToolTip="Remove currently selected pin" />
                     <Button Grid.Row="1" Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Clear All Pins" Command="{Binding ClearPinsCommand}" Height="28" Background="#E11D48" Margin="4,0,0,0" FontSize="11" ToolTip="Remove all pins" />
                 </Grid>

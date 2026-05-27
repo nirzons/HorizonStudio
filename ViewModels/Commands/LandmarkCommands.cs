@@ -25,7 +25,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             _telescopeMediator = telescopeMediator ?? throw new ArgumentNullException(nameof(telescopeMediator));
             _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
 
-            AddLandmarkCommand = new RelayCommand(o => AddLandmark(), o => _vm.IsMountConnected && !_vm.IsSyncPreparing);
+            AddLandmarkCommand = new RelayCommand(o => AddLandmark(), o => _vm.IsMountConnected && !_vm.IsSyncPreparing && !_vm.IsSlewing && !_vm.IsActionSlewing);
             DeleteLandmarkCommand = new RelayCommand(o => DeleteLandmark(), o => _vm.SelectedLandmark != null && !_vm.IsSyncPreparing);
             SlewToLandmarkCommand = new RelayCommand(o => SlewToLandmark(), o => _vm.SelectedLandmark != null && _vm.IsMountConnected && !_vm.IsSlewing && !_vm.IsActionSlewing && !_vm.IsSyncPreparing);
             SelectLandmarkCommand = new RelayCommand(o => SelectLandmark(o as SyncLandmark), o => o is SyncLandmark && !_vm.IsSyncPreparing);
