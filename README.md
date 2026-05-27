@@ -50,6 +50,7 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 * **N.I.N.A.** (Version 3.0 or higher)
 * An equatorial mount connected via ASCOM/Alpaca
 * A wide-angled DirectShow USB Webcam (Highly Recommended for macro spatial awareness and fast mapping) **OR** your main imaging camera (via N.I.N.A. integration)
+  * 📱 **Smartphone as a Webcam**: You can use your smartphone (iOS or Android) as a high-quality wireless camera feed! We highly recommend using **Iriun Webcam** ([iriun.com](https://iriun.com/)) over WiFi or USB. It allows you to lock the video stream orientation on your phone, completely preventing gravity-based phone auto-rotation from interfering with the plugin's software-based field counter-rotation.
 
 ---
 
