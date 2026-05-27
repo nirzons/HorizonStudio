@@ -55,6 +55,7 @@ Desktop.ini
 # Ignore planning documents (but keep README)
 *.md
 !README.md
+!CODE_STRUCTURE.md
 
 # Ignore scratch tools/tests directory
 scratch/
