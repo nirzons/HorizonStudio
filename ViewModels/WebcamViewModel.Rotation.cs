@@ -29,8 +29,16 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
                     bool isPointingEast = false;
                     var side = _parent.TelescopeInfo?.SideOfPier;
-                    if (side != null && !side.ToString().Contains("Unknown")) {
-                        isPointingEast = side.ToString().Contains("West");
+                    if (side != null) {
+                        if (side.ToString().Contains("Unknown")) {
+                            isPointingEast = (haDeg < -0.1);
+                        } else {
+                            try {
+                                isPointingEast = (side == global::NINA.Core.Enum.PierSide.pierWest);
+                            } catch {
+                                isPointingEast = side.ToString().Contains("West");
+                            }
+                        }
                     } else {
                         isPointingEast = (haDeg < -0.1);
                     }
