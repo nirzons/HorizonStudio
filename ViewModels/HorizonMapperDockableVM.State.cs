@@ -74,6 +74,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             if (currentMount != _lastIsMountConnected) {
                 _lastIsMountConnected = currentMount;
                 RaisePropertyChanged(nameof(IsMountConnected));
+                RaisePropertyChanged(nameof(CanDropPin));
                 Camera?.NotifyParentPropertiesChanged();
                 Radar?.NotifyParentPropertiesChanged();
                 Landmark?.NotifyParentPropertiesChanged();
@@ -83,6 +84,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             if (currentSlewing != _lastIsSlewing) {
                 _lastIsSlewing = currentSlewing;
                 RaisePropertyChanged(nameof(IsSlewing));
+                RaisePropertyChanged(nameof(CanDropPin));
                 Radar?.NotifyParentPropertiesChanged();
                 Landmark?.NotifyParentPropertiesChanged();
                 CommandManager.InvalidateRequerySuggested();

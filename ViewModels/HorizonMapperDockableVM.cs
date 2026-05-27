@@ -188,6 +188,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             set {
                 _isRunning = value;
                 RaisePropertyChanged(nameof(IsRunning));
+                RaisePropertyChanged(nameof(CanDropPin));
                 CommandManager.InvalidateRequerySuggested();
             }
         }

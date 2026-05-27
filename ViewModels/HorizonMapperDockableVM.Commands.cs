@@ -2,8 +2,8 @@ using System.Windows.Input;
 
 namespace NirZonshine.NINA.HorizonStudio.ViewModels {
     public partial class HorizonMapperDockableVM {
-        // CanDropPin: Mapping must be started AND mount must be connected
-        public bool CanDropPin => IsRunning && IsMountConnected;
+        // CanDropPin: Mapping must be started, mount connected, AND not slewing
+        public bool CanDropPin => IsRunning && IsMountConnected && !IsSlewing;
 
         // Forward commands to specific sub-command classes
         public ICommand StartMappingCommand => _navigationCommands.StartMappingCommand;
