@@ -214,7 +214,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 } catch (Exception ex) {
                     _vm.Log($"[Error] Slew Jog failed: {ex.Message}");
                 } finally {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                    ThreadHelper.RunOnUI(() => {
                         _vm.IsActionSlewing = false;
                     });
                 }

@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using NirZonshine.NINA.HorizonStudio.Domain;
+using NirZonshine.NINA.HorizonStudio.Services;
 
 namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
     public partial class NavigationCommands {
@@ -185,7 +186,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 } catch (Exception ex) {
                     _vm.Log($"[Error] Slew to active node failed: {ex.Message}");
                 } finally {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                    ThreadHelper.RunOnUI(() => {
                         _vm.IsActionSlewing = false;
                     });
                 }
@@ -358,7 +359,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 } catch (Exception ex) {
                     _vm.Log($"[Error] Radar click slew failed: {ex.Message}");
                 } finally {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                    ThreadHelper.RunOnUI(() => {
                         _vm.IsActionSlewing = false;
                     });
                 }

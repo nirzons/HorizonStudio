@@ -152,7 +152,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
         public void UpdateDeviceInfo(CameraInfo deviceInfo) {
             _currentCameraInfo = deviceInfo;
-            System.Windows.Application.Current.Dispatcher.InvokeAsync(() => {
+            ThreadHelper.RunOnUI(() => {
                 RaisePropertyChanged(nameof(IsCameraConnected));
                 Camera?.NotifyParentPropertiesChanged();
                 if (deviceInfo != null && Camera != null) {
@@ -165,7 +165,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
         public void UpdateDeviceInfo(TelescopeInfo deviceInfo) {
             _currentTelescopeInfo = deviceInfo;
-            System.Windows.Application.Current.Dispatcher.InvokeAsync(() => {
+            ThreadHelper.RunOnUI(() => {
                 RaisePropertyChanged(nameof(IsMountConnected));
                 RaisePropertyChanged(nameof(IsSlewing));
                 Camera?.NotifyParentPropertiesChanged();

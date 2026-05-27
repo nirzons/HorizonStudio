@@ -15,20 +15,20 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public void Log(string message) {
             var formatted = $"[{DateTime.Now:HH:mm:ss}] {message}";
             Logger.Info($"[Horizon Studio] {message}");
-            System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
+            ThreadHelper.RunOnUI(() => {
                 _logBuffer.Enqueue(formatted);
                 if (_logBuffer.Count > MaxLogLines) {
                     _logBuffer.Dequeue();
                 }
                 Logs = string.Join("\n", _logBuffer);
-            }));
+            });
         }
 
         internal void SetStatus(string text, Brush color) {
-            System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
+            ThreadHelper.RunOnUI(() => {
                 StatusIndicatorText = text;
                 StatusIndicatorColor = color;
-            }));
+            });
         }
 
         private void SettingsManager_PropertyChanged(object sender, PropertyChangedEventArgs e) {
@@ -96,9 +96,9 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         }
 
         private void WebcamService_StateChanged(object sender, WebcamState state) {
-            System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
+            ThreadHelper.RunOnUI(() => {
                 Webcam?.OnWebcamStateChanged(state);
-            }));
+            });
         }
     }
 }

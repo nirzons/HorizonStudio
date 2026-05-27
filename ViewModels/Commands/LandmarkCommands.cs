@@ -5,6 +5,7 @@ using System.Windows.Input;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Profile.Interfaces;
 using NirZonshine.NINA.HorizonStudio.Domain;
+using NirZonshine.NINA.HorizonStudio.Services;
 
 namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
     public class LandmarkCommands {
@@ -145,7 +146,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 } catch (Exception ex) {
                     _vm.Log($"[Error] Slew to landmark failed: {ex.Message}");
                 } finally {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                    ThreadHelper.RunOnUI(() => {
                         _vm.IsActionSlewing = false;
                     });
                 }

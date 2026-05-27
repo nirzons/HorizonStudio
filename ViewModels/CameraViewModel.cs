@@ -8,6 +8,7 @@ using NINA.Core.Model.Equipment;
 using NINA.Core.Utility;
 using NINA.Equipment.Equipment.MyCamera;
 using NINA.Equipment.Model;
+using NirZonshine.NINA.HorizonStudio.Services;
 
 namespace NirZonshine.NINA.HorizonStudio.ViewModels {
     public class CameraViewModel : SubViewModelBase {
@@ -235,11 +236,11 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
                                 var rendered = imageData.RenderImage();
                                 if (rendered != null) {
-                                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => {
+                                    ThreadHelper.RunOnUI(() => {
                                         if (_parent.Webcam != null) {
                                             _parent.Webcam.LastFrame = rendered.Image;
                                         }
-                                    }));
+                                    });
 
                                     try {
                                         var updatedRendered = await rendered.DetectStars(false, global::NINA.Core.Enum.StarSensitivityEnum.Normal, global::NINA.Core.Enum.NoiseReductionEnum.Normal, token, null);
@@ -278,7 +279,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 } catch { }
                 _mainCameraCTS = null;
 
-                System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                ThreadHelper.RunOnUI(() => {
                     IsMainCameraActive = false;
                     _parent.SetStatus("Ready", HorizonMapperDockableVM.StatusIdleColor);
                     RaisePropertyChanged(nameof(CanStartMainCamera));
