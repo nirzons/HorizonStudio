@@ -221,7 +221,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
             SyncLandmark snappedLandmark = null;
             foreach (var landmark in _vm.SyncLandmarks) {
-                double distToSpecial = GetAngularDistance(azimuth, altitude, landmark.Azimuth, landmark.Altitude);
+                double distToSpecial = AstronomyHelper.GetAngularDistance(azimuth, altitude, landmark.Azimuth, landmark.Altitude);
                 if (distToSpecial < 2.5) {
                     snappedLandmark = landmark;
                     break;
@@ -249,7 +249,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 int snappedIndex = -1;
                 for (int i = 0; i < _vm.HorizonNodes.Count; i++) {
                     var node = _vm.HorizonNodes[i];
-                    double dist = GetAngularDistance(azimuth, clickedAlt, node.Azimuth, node.Altitude);
+                    double dist = AstronomyHelper.GetAngularDistance(azimuth, clickedAlt, node.Azimuth, node.Altitude);
                     if (dist < 2.5) {
                         snappedIndex = i;
                         break;
@@ -364,19 +364,6 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     });
                 }
             });
-        }
-
-        private double GetAngularDistance(double az1, double alt1, double az2, double alt2) {
-            double rad = Math.PI / 180.0;
-            double rAz1 = az1 * rad;
-            double rAlt1 = alt1 * rad;
-            double rAz2 = az2 * rad;
-            double rAlt2 = alt2 * rad;
-
-            double cosTheta = Math.Sin(rAlt1) * Math.Sin(rAlt2) + Math.Cos(rAlt1) * Math.Cos(rAlt2) * Math.Cos(rAz1 - rAz2);
-            cosTheta = Math.Max(-1.0, Math.Min(1.0, cosTheta));
-
-            return Math.Acos(cosTheta) * 180.0 / Math.PI;
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Windows.Media;
+using NirZonshine.NINA.HorizonStudio.Services;
 
 namespace NirZonshine.NINA.HorizonStudio.ViewModels {
     public class RadarViewModel : SubViewModelBase, IRadarClickHandler {
@@ -146,7 +147,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             if (altitude > 90.0) altitude = 90.0;
 
             foreach (var landmark in _parent.SyncLandmarks) {
-                double distToSpecial = GetAngularDistance(azimuth, altitude, landmark.Azimuth, landmark.Altitude);
+                double distToSpecial = AstronomyHelper.GetAngularDistance(azimuth, altitude, landmark.Azimuth, landmark.Altitude);
                 if (distToSpecial < 2.5) {
                     return true;
                 }
@@ -178,19 +179,6 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             RaisePropertyChanged(nameof(RadarHorizonPoints));
             RaisePropertyChanged(nameof(RadarObstructionPoints));
             RaisePropertyChanged(nameof(CanVerifyPoints));
-        }
-
-        private double GetAngularDistance(double az1, double alt1, double az2, double alt2) {
-            double rad = Math.PI / 180.0;
-            double rAz1 = az1 * rad;
-            double rAlt1 = alt1 * rad;
-            double rAz2 = az2 * rad;
-            double rAlt2 = alt2 * rad;
-
-            double cosTheta = Math.Sin(rAlt1) * Math.Sin(rAlt2) + Math.Cos(rAlt1) * Math.Cos(rAlt2) * Math.Cos(rAz1 - rAz2);
-            cosTheta = Math.Max(-1.0, Math.Min(1.0, cosTheta));
-
-            return Math.Acos(cosTheta) * 180.0 / Math.PI;
         }
     }
 }

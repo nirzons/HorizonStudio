@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using NirZonshine.NINA.HorizonStudio.Domain;
+using NirZonshine.NINA.HorizonStudio.Services;
 
 namespace NirZonshine.NINA.HorizonStudio.ViewModels {
     public class LandmarkViewModel : SubViewModelBase {
@@ -40,7 +41,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 if (!_parent.IsSyncPreparing || !_parent.IsMountConnected || _parent.IsSlewing || _parent.IsActionSlewing || _parent.SyncRefNode == null) {
                     return false;
                 }
-                double dist = GetAngularDistance(_parent.CurrentAz, _parent.CurrentAlt, _parent.SyncRefNode.Azimuth, _parent.SyncRefNode.Altitude);
+                double dist = AstronomyHelper.GetAngularDistance(_parent.CurrentAz, _parent.CurrentAlt, _parent.SyncRefNode.Azimuth, _parent.SyncRefNode.Altitude);
                 return dist >= 0.05;
             }
         }
@@ -48,7 +49,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public string SyncInstructionText {
             get {
                 if (_parent.SyncRefNode == null) return "⚠️ Sync Mode: Jog mount to center landmark in feed, then click Confirm.";
-                double dist = GetAngularDistance(_parent.CurrentAz, _parent.CurrentAlt, _parent.SyncRefNode.Azimuth, _parent.SyncRefNode.Altitude);
+                double dist = AstronomyHelper.GetAngularDistance(_parent.CurrentAz, _parent.CurrentAlt, _parent.SyncRefNode.Azimuth, _parent.SyncRefNode.Altitude);
                 if (dist < 0.05) {
                     return "⚠️ Sync Mode: Jog mount to center landmark in feed (Confirm will enable once mount has moved).";
                 }
@@ -68,19 +69,6 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
 
         public void NotifyLandmarksCollectionChanged() {
             RaisePropertyChanged(nameof(HasLandmarks));
-        }
-
-        private double GetAngularDistance(double az1, double alt1, double az2, double alt2) {
-            double rad = Math.PI / 180.0;
-            double rAz1 = az1 * rad;
-            double rAlt1 = alt1 * rad;
-            double rAz2 = az2 * rad;
-            double rAlt2 = alt2 * rad;
-
-            double cosTheta = Math.Sin(rAlt1) * Math.Sin(rAlt2) + Math.Cos(rAlt1) * Math.Cos(rAlt2) * Math.Cos(rAz1 - rAz2);
-            cosTheta = Math.Max(-1.0, Math.Min(1.0, cosTheta));
-
-            return Math.Acos(cosTheta) * 180.0 / Math.PI;
         }
     }
 }

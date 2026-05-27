@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows.Input;
 using NINA.Equipment.Interfaces.Mediator;
 using NirZonshine.NINA.HorizonStudio.Domain;
+using NirZonshine.NINA.HorizonStudio.Services;
 
 namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
     public class SyncCommands {
@@ -196,19 +197,6 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 _vm.Log($"[Error] Failed to warp profile: {ex.Message}");
                 global::NINA.Core.Utility.Notification.Notification.ShowError($"Failed to warp profile: {ex.Message}");
             }
-        }
-
-        private double GetAngularDistance(double az1, double alt1, double az2, double alt2) {
-            double rad = Math.PI / 180.0;
-            double rAz1 = az1 * rad;
-            double rAlt1 = alt1 * rad;
-            double rAz2 = az2 * rad;
-            double rAlt2 = alt2 * rad;
-
-            double cosTheta = Math.Sin(rAlt1) * Math.Sin(rAlt2) + Math.Cos(rAlt1) * Math.Cos(rAlt2) * Math.Cos(rAz1 - rAz2);
-            cosTheta = Math.Max(-1.0, Math.Min(1.0, cosTheta));
-
-            return Math.Acos(cosTheta) * 180.0 / Math.PI;
         }
     }
 }
