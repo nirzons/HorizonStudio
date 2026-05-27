@@ -145,7 +145,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 var name = _vm.SelectedLandmark.Name;
                 _vm.SyncLandmarks.Remove(_vm.SelectedLandmark);
                 _vm.SelectedLandmark = null;
-                _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
+                _vm.NotifyPropertyChanged("HasLandmarks");
                 _vm.Landmark?.NotifyLandmarksCollectionChanged();
                 _vm.Log($"[Landmarks] Removed landmark '{name}' via Active Node card deletion.");
                 return;

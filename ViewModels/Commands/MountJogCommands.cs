@@ -47,7 +47,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
         public ICommand JogS2E1Command { get; }
 
         public MountJogCommands(HorizonMapperDockableVM vm, ITelescopeMediator telescopeMediator, SafetyManager safetyManager, IProfileService profileService) {
-            _vm = vm;
+            _vm = vm ?? throw new ArgumentNullException(nameof(vm));
             _telescopeMediator = telescopeMediator;
             _safetyManager = safetyManager;
             _profileService = profileService;

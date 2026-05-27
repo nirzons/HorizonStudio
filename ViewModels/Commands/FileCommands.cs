@@ -165,7 +165,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
                     if (_vm.SyncLandmarks.Count > 0) {
                         _vm.SelectedLandmark = _vm.SyncLandmarks[0];
-                        _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
+                        _vm.NotifyPropertyChanged("HasLandmarks");
                         _vm.Landmark?.NotifyLandmarksCollectionChanged();
                     }
 

@@ -46,6 +46,22 @@ namespace NirZonshine.NINA.HorizonStudio.Domain {
             }
         }
 
+        public override bool Equals(object obj) {
+            return obj is HorizonNode other &&
+                   Azimuth.Equals(other.Azimuth) &&
+                   Altitude.Equals(other.Altitude) &&
+                   Timestamp.Equals(other.Timestamp);
+        }
+
+        public override int GetHashCode() {
+            // Combine hash codes of the three value fields
+            int hash = 17;
+            hash = hash * 23 + Azimuth.GetHashCode();
+            hash = hash * 23 + Altitude.GetHashCode();
+            hash = hash * 23 + Timestamp.GetHashCode();
+            return hash;
+        }
+
         public override string ToString() {
             // Formatted for N.I.N.A. horizon file: "Azimuth Altitude"
             return $"{Azimuth:F2} {Altitude:F2}";

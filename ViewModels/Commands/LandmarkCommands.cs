@@ -50,7 +50,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             var landmark = new SyncLandmark(name, az, alt);
             _vm.SyncLandmarks.Add(landmark);
             _vm.SelectedLandmark = landmark;
-            _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
+            _vm.NotifyPropertyChanged("HasLandmarks");
             _vm.Landmark?.NotifyLandmarksCollectionChanged();
             _vm.Log($"[Landmarks] Added landmark '{name}' at Az: {az:F2}°, Alt: {alt:F2}°");
         }
@@ -60,7 +60,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             var name = _vm.SelectedLandmark.Name;
             _vm.SyncLandmarks.Remove(_vm.SelectedLandmark);
             _vm.SelectedLandmark = null;
-            _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
+            _vm.NotifyPropertyChanged("HasLandmarks");
             _vm.Landmark?.NotifyLandmarksCollectionChanged();
             _vm.Log($"[Landmarks] Removed landmark '{name}'.");
         }
@@ -180,7 +180,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             if (_vm.SyncLandmarks.Count == 0) return;
             _vm.SyncLandmarks.Clear();
             _vm.SelectedLandmark = null;
-            _vm.NotifyPropertyChanged(nameof(_vm.HasLandmarks));
+            _vm.NotifyPropertyChanged("HasLandmarks");
             _vm.Landmark?.NotifyLandmarksCollectionChanged();
             _vm.Log("[Landmarks] Cleared all landmarks.");
         }
