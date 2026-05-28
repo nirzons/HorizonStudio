@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using NINA.Profile.Interfaces;
 using NirZonshine.NINA.HorizonStudio.Domain;
@@ -55,37 +57,116 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     rawNodes = rawNodes.OrderBy(n => n.Az).ToList();
                 }
 
-                _vm.Log($"[Save] Writing {rawNodes.Count} pinned nodes (N.I.N.A. interpolates natively).");
+                _vm.Log($"[Save] Writing {rawNodes.Count} pinned nodes.");
 
                 string suggestedName = $"CustomHorizon_{DateTime.Now:yyyyMMdd_HHmm}.hrz";
 
                 var dialog = new SaveFileDialog {
-                    Title = "Save N.I.N.A. Horizon Profile",
-                    Filter = "N.I.N.A. Horizon Files (*.hrz)|*.hrz|Legacy Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                    Title = "Save Horizon Profile",
+                    Filter = "N.I.N.A. Horizon Files (*.hrz)|*.hrz|SkySafari Horizon Image (*.png)|*.png|Legacy Horizon Files (*.hrzn)|*.hrzn|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
                     DefaultExt = ".hrz",
                     FileName = suggestedName
                 };
 
                 if (dialog.ShowDialog() == true) {
-                    var fileLines = new List<string>();
+                    string ext = Path.GetExtension(dialog.FileName).ToLower();
+                    if (ext == ".png") {
+                        SaveSkySafariPng(dialog.FileName);
+                    } else {
+                        var fileLines = new List<string>();
 
-                    foreach (var landmark in _vm.SyncLandmarks) {
-                        fileLines.Add($"# HorizonStudio_Landmark: Id={landmark.Id};Name={landmark.Name};Az={landmark.Azimuth.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)};Alt={landmark.Altitude.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
+                        foreach (var landmark in _vm.SyncLandmarks) {
+                            fileLines.Add($"# HorizonStudio_Landmark: Id={landmark.Id};Name={landmark.Name};Az={landmark.Azimuth.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)};Alt={landmark.Altitude.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
+                        }
+                        fileLines.Add("# Az Alt");
+
+                        foreach (var n in rawNodes) {
+                            double normalizedAz = (n.Az % 360.0 + 360.0) % 360.0;
+                            fileLines.Add($"{normalizedAz:F4} {n.Alt:F4}");
+                        }
+                        File.WriteAllLines(dialog.FileName, fileLines);
+
+                        _vm.Log($"[Save] Successfully saved {rawNodes.Count} nodes to {dialog.FileName}");
+                        global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"Horizon profile saved successfully to {Path.GetFileName(dialog.FileName)}!");
                     }
-                    fileLines.Add("# Az Alt");
-
-                    foreach (var n in rawNodes) {
-                        double normalizedAz = (n.Az % 360.0 + 360.0) % 360.0;
-                        fileLines.Add($"{normalizedAz:F4} {n.Alt:F4}");
-                    }
-                    File.WriteAllLines(dialog.FileName, fileLines);
-
-                    _vm.Log($"[Save] Successfully saved {rawNodes.Count} nodes to {dialog.FileName}");
-                    global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"Horizon profile saved successfully to {Path.GetFileName(dialog.FileName)}!");
                 }
             } catch (Exception ex) {
                 _vm.Log($"[Error] Failed to save horizon: {ex.Message}");
                 global::NINA.Core.Utility.Notification.Notification.ShowError($"Failed to save horizon: {ex.Message}");
+            }
+        }
+
+        private void SaveSkySafariPng(string fileName) {
+            try {
+                _vm.Log($"[Save] Generating SkySafari compliant 32-bit custom horizon image...");
+                int width = 2048;
+                int height = 1024;
+                int bytesPerPixel = 4;
+                int stride = width * bytesPerPixel;
+                byte[] pixelBuffer = new byte[height * stride];
+
+                for (int x = 0; x < width; x++) {
+                    // Map X coordinate to Azimuth (0 to 360 degrees)
+                    double azimuth = x * 360.0 / width;
+                    
+                    // Retrieve interpolated altitude from ViewModel
+                    double altitude = _vm.GetInterpolatedAltitude(azimuth);
+                    
+                    // Map altitude to Y coordinate: Zenith (+90) is Y=0, Horizon (0) is Y=512, Nadir (-90) is Y=1023
+                    double yHorizon = 512.0 - (altitude * 512.0 / 90.0);
+                    int yHorizonInt = (int)Math.Round(yHorizon);
+                    yHorizonInt = Math.Max(0, Math.Min(height - 1, yHorizonInt));
+
+                    for (int y = 0; y < height; y++) {
+                        int pixelOffset = (y * stride) + (x * bytesPerPixel);
+
+                        if (y >= yHorizonInt - 1 && y <= yHorizonInt) {
+                            // Fine line of solid red right at the actual horizon boundary (2 pixels thick)
+                            pixelBuffer[pixelOffset] = 0;       // Blue
+                            pixelBuffer[pixelOffset + 1] = 0;   // Green
+                            pixelBuffer[pixelOffset + 2] = 255; // Red
+                            pixelBuffer[pixelOffset + 3] = 255; // Alpha (Solid Opaque)
+                        } else if (y > yHorizonInt) {
+                            // Ground/Obstruction region: Beautiful, semi-transparent dark blue at 70% opacity
+                            // Format: BGRA (Blue, Green, Red, Alpha)
+                            pixelBuffer[pixelOffset] = 70;      // Blue (high blue component for astronomical feel)
+                            pixelBuffer[pixelOffset + 1] = 20;  // Green (deep dark hue)
+                            pixelBuffer[pixelOffset + 2] = 15;  // Red (deep dark hue)
+                            pixelBuffer[pixelOffset + 3] = 178; // Alpha (70% opaque / 30% transparent)
+                        } else {
+                            // Sky region: Completely transparent (Alpha = 0)
+                            pixelBuffer[pixelOffset] = 0;
+                            pixelBuffer[pixelOffset + 1] = 0;
+                            pixelBuffer[pixelOffset + 2] = 0;
+                            pixelBuffer[pixelOffset + 3] = 0;   // Alpha (Transparent)
+                        }
+                    }
+                }
+
+                // Create a standard WPF BitmapSource from the pixel array
+                var bitmap = BitmapSource.Create(
+                    width,
+                    height,
+                    96,
+                    96,
+                    PixelFormats.Bgra32,
+                    null,
+                    pixelBuffer,
+                    stride
+                );
+
+                // Encode and write to disk as a 32-bit PNG
+                using (var stream = new FileStream(fileName, FileMode.Create)) {
+                    var encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(bitmap));
+                    encoder.Save(stream);
+                }
+
+                _vm.Log($"[Save] Successfully exported SkySafari panorama image to {fileName}");
+                global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"SkySafari panorama saved successfully to {Path.GetFileName(fileName)}!");
+            } catch (Exception ex) {
+                _vm.Log($"[Error] Failed to generate SkySafari PNG: {ex.Message}");
+                global::NINA.Core.Utility.Notification.Notification.ShowError($"Failed to generate SkySafari PNG: {ex.Message}");
             }
         }
 
