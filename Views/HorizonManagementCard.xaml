@@ -530,6 +530,39 @@
                 </Grid>
             </StackPanel>
         </Border>
+
+        <!-- Section 7: 3D Polar Alignment Sync -->
+        <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="3D Polar Alignment Sync" FontSize="12" FontWeight="Bold" Foreground="#FF38BDF8" Margin="0,0,0,8" />
+                
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                        <TextBlock Text="↕ Alt Offset (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                        <TextBox Text="{Binding PolarAltOffset, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                        <TextBlock Text="↔ Az Offset (°)" FontSize="9" Foreground="DarkGray" Margin="0,0,0,2" />
+                        <TextBox Text="{Binding PolarAzOffset, UpdateSourceTrigger=PropertyChanged}" Height="24" VerticalContentAlignment="Center" Background="#1E1E24" BorderBrush="#3D3D45" Foreground="White" Padding="4,0" />
+                    </StackPanel>
+                </Grid>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="⚡ Auto-Detect" Command="{Binding AutoDetectPolarOffsetCommand}" Height="30" Background="#4F46E5" Margin="0,0,4,0" ToolTip="Scan latest N.I.N.A. log for polar alignment errors" FontSize="10.5" />
+                    <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Apply Polar Sync" Command="{Binding ApplyPolarSyncCommand}" Height="30" Background="#10B981" Margin="4,0,0,0" ToolTip="Apply 3D Polar Alignment warp to profile" FontSize="10.5" />
+                </Grid>
+            </StackPanel>
+        </Border>
         
     </StackPanel>
 </UserControl>

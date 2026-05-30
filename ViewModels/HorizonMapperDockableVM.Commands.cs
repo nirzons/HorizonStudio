@@ -18,6 +18,8 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
         public ICommand PrepareSyncCommand => _syncCommands.PrepareSyncCommand;
         public ICommand ConfirmSyncCommand => _syncCommands.ConfirmSyncCommand;
         public ICommand CancelSyncCommand => _syncCommands.CancelSyncCommand;
+        public ICommand AutoDetectPolarOffsetCommand => _syncCommands.AutoDetectPolarOffsetCommand;
+        public ICommand ApplyPolarSyncCommand => _syncCommands.ApplyPolarSyncCommand;
         public ICommand AddLandmarkCommand => _landmarkCommands.AddLandmarkCommand;
         public ICommand DeleteLandmarkCommand => _landmarkCommands.DeleteLandmarkCommand;
         public ICommand SlewToLandmarkCommand => _landmarkCommands.SlewToLandmarkCommand;

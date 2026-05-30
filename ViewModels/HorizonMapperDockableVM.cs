@@ -371,6 +371,29 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
             }
         }
 
+        private double _polarAltOffset = 0.0;
+        public double PolarAltOffset {
+            get => _polarAltOffset;
+            set {
+                if (_polarAltOffset != value) {
+                    _polarAltOffset = value;
+                    RaisePropertyChanged(nameof(PolarAltOffset));
+                }
+            }
+        }
+
+        private double _polarAzOffset = 0.0;
+        public double PolarAzOffset {
+            get => _polarAzOffset;
+            set {
+                if (_polarAzOffset != value) {
+                    _polarAzOffset = value;
+                    RaisePropertyChanged(nameof(PolarAzOffset));
+                }
+            }
+        }
+
+
 
         public void NotifyLandmarkSelectionChanged() {
             RaisePropertyChanged(nameof(SelectedLandmark));
