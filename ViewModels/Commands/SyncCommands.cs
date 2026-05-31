@@ -251,8 +251,10 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
                 // Scan fresh log files (modified in the last 6 hours)
                 var decPattern = new Regex(@"Calculated Alignment Errors:.*Alt:\s*(?<alt>[-+]?\d+\.?\d*)\'\s*,\s*Az:\s*(?<az>[-+]?\d+\.?\d*)\'", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                var dmsPattern = new Regex(@"Calculated Alignment Errors:.*Alt\s*(?<altSign>[-+])?(?:(?<altDeg>\d+)[°d])?\s*(?<altMin>\d+)\'\s*(?<altSec>\d+)?\""\s*,\s*Az\s*(?<azSign>[-+])?(?:(?<azDeg>\d+)[°d])?\s*(?<azMin>\d+)\'\s*(?<azSec>\d+)?\""", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                var tppaPattern = new Regex(@"Calculated alignment error\s*-\s*Altitude:\s*(?<altSign>[-+])?(?:(?<altDeg>\d+)[°d])?\s*(?<altMin>\d+)\'\s*(?<altSec>\d+)?\"".*Azimuth:\s*(?<azSign>[-+])?(?:(?<azDeg>\d+)[°d])?\s*(?<azMin>\d+)\'\s*(?<azSec>\d+)?\""", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var dmsPattern = new Regex(@"Calculated Alignment Errors:.*Alt\s*(?<altSign>[-+])?(?:(?<altDeg>\d+)[^0-9\'-]*)?\s*(?<altMin>\d+)\'\s*(?<altSec>\d+)?\""\s*,\s*Az\s*(?<azSign>[-+])?(?:(?<azDeg>\d+)[^0-9\'-]*)?\s*(?<azMin>\d+)\'\s*(?<azSec>\d+)?\""", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var tppaPattern = new Regex(@"Calculated alignment error\s*-\s*Altitude:\s*(?<altSign>[-+])?(?:(?<altDeg>\d+)[^0-9\'-]*)?\s*(?<altMin>\d+)\'\s*(?<altSec>\d+)?\"".*Azimuth:\s*(?<azSign>[-+])?(?:(?<azDeg>\d+)[^0-9\'-]*)?\s*(?<azMin>\d+)\'\s*(?<azSec>\d+)?\""", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var tppaStandardPattern = new Regex(@"Calculated Error:\s*Az:\s*(?<azSign>[-+])?(?:(?<azDeg>\d+)[^0-9\'-]*)?(?<azMin>\d+)\'\s*(?<azSec>\d+)?\""\s*,\s*Alt:\s*(?<altSign>[-+])?(?:(?<altDeg>\d+)[^0-9\'-]*)?(?<altMin>\d+)\'\s*(?<altSec>\d+)?\""", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var tppaAltFirstPattern = new Regex(@"Calculated Error:\s*Alt:\s*(?<altSign>[-+])?(?:(?<altDeg>\d+)[^0-9\'-]*)?(?<altMin>\d+)\'\s*(?<altSec>\d+)?\""\s*,\s*Az:\s*(?<azSign>[-+])?(?:(?<azDeg>\d+)[^0-9\'-]*)?(?<azMin>\d+)\'\s*(?<azSec>\d+)?\""", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
                 var candidates = new List<PolarLogMatch>();
 
@@ -278,6 +280,12 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                                     match = dmsPattern.Match(line);
                                     if (!match.Success) {
                                         match = tppaPattern.Match(line);
+                                    }
+                                    if (!match.Success) {
+                                        match = tppaStandardPattern.Match(line);
+                                    }
+                                    if (!match.Success) {
+                                        match = tppaAltFirstPattern.Match(line);
                                     }
 
                                     if (match.Success) {
@@ -309,11 +317,22 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
 
                                     var lineAge = DateTime.UtcNow - lineTime;
                                     if (lineAge.TotalHours <= 6 && lineAge.TotalHours >= -1.0) {
+                                        string sourcePlugin = "Unknown";
+                                        if (line.IndexOf("2-Point Polar Alignment", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                            line.IndexOf("AlignmentWorkflowController", StringComparison.OrdinalIgnoreCase) >= 0) {
+                                            sourcePlugin = "2PPA";
+                                        } else if (line.IndexOf("PolarAlignment", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                   line.IndexOf("Three Point Polar Alignment", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                   line.IndexOf("TPAPA", StringComparison.OrdinalIgnoreCase) >= 0) {
+                                            sourcePlugin = "TPPA";
+                                        }
+
                                         candidates.Add(new PolarLogMatch {
                                             Timestamp = lineTime,
                                             AltOffset = altArcmin,
                                             AzOffset = azArcmin,
-                                            LogFile = logFile.Name
+                                            LogFile = logFile.Name,
+                                            SourcePlugin = sourcePlugin
                                         });
                                     }
                                 }
@@ -322,6 +341,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                     } catch (Exception ex) {
                         _vm.Log($"[Warning] Failed to read log file {logFile.Name}: {ex.Message}");
                     }
+                    if (candidates.Count > 0) break;
                 }
 
                 if (candidates.Count == 0) {
@@ -333,26 +353,18 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
                 // Sort chronologically
                 var sortedCandidates = candidates.OrderBy(c => c.Timestamp).ToList();
 
-                // Trace back to find the initial offset of the latest run
-                int selectedIndex = sortedCandidates.Count - 1;
-                for (int i = sortedCandidates.Count - 1; i > 0; i--) {
-                    var gap = sortedCandidates[i].Timestamp - sortedCandidates[i - 1].Timestamp;
-                    if (gap.TotalMinutes > 5.0) {
-                        // Gap is more than 5 minutes, this marks the start of the latest run!
-                        selectedIndex = i;
-                        break;
-                    }
-                    if (i == 1) {
-                        selectedIndex = 0;
-                    }
-                }
-
-                var bestMatch = sortedCandidates[selectedIndex];
+                // Select the initial offset of the very first successful polar alignment run of the session
+                var bestMatch = sortedCandidates[0];
                 _vm.PolarAltOffset = Math.Round(bestMatch.AltOffset / 60.0, 4);
                 _vm.PolarAzOffset = Math.Round(bestMatch.AzOffset / 60.0, 4);
 
-                _vm.Log($"[Polar Sync] Auto-detected fresh alignment from N.I.N.A. logs ({bestMatch.LogFile}). Initial Alt Error: {bestMatch.AltOffset:F2}' ({_vm.PolarAltOffset:F4}°), Az Error: {bestMatch.AzOffset:F2}' ({_vm.PolarAzOffset:F4}°) (Timestamp: {bestMatch.Timestamp.ToLocalTime():yyyy-MM-dd HH:mm:ss})");
-                global::NINA.Core.Utility.Notification.Notification.ShowSuccess("Successfully auto-detected polar offset from log file!");
+                var timeDiff = DateTime.UtcNow - bestMatch.Timestamp;
+                int hours = Math.Max(0, (int)timeDiff.TotalHours);
+                int minutes = Math.Max(0, timeDiff.Minutes);
+                string relativeTime = $"{hours}:{minutes:D2} hours ago";
+
+                _vm.Log($"[Polar Sync] Auto-detected fresh alignment via {bestMatch.SourcePlugin} from N.I.N.A. logs ({bestMatch.LogFile}). Initial Alt Error: {bestMatch.AltOffset:F2}' ({_vm.PolarAltOffset:F4}°), Az Error: {bestMatch.AzOffset:F2}' ({_vm.PolarAzOffset:F4}°) ({relativeTime})");
+                global::NINA.Core.Utility.Notification.Notification.ShowSuccess($"Successfully auto-detected polar offset from {bestMatch.SourcePlugin} ({relativeTime})!");
 
             } catch (Exception ex) {
                 _vm.Log($"[Error] Failed to auto-detect polar offset: {ex.Message}");
@@ -440,6 +452,7 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels.Commands {
             public double AltOffset { get; set; }
             public double AzOffset { get; set; }
             public string LogFile { get; set; }
+            public string SourcePlugin { get; set; }
         }
     }
 }
