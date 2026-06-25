@@ -6,8 +6,8 @@ using System.Runtime.InteropServices;
 [assembly: Guid("ef99cb7e-3c22-491c-b26a-54315222bf9b")]
 
 // [MANDATORY] The assembly versioning
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 
 // [MANDATORY] The name of your plugin
 [assembly: AssemblyTitle("Horizon Studio")]
