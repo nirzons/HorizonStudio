@@ -21,9 +21,10 @@ Instead of guessing where trees, rooftops, or distant mountains intersect the ni
 * **Real-Time Star Detection HUD:** A translucent eyepiece overlay displays live telemetry — star count, median HFR, and ADU level — so you can verify optical alignment at a glance.
 * **Camera Safety:** Implements hardware capture-block serialization and physical exposure aborts to prevent driver lockouts when stopping or switching feeds.
 
-### 🔄 Webcam Co-Alignment & Rotation
+### 🔄 Webcam Co-Alignment, Rotation & Zoom
 * **Co-Alignment Assistant:** Center a landmark in your main imaging telescope, click the same target in the webcam feed, and the plugin locks the optical offset.
 * **Equatorial Counter-Rotation:** Automatically rotates the camera feed in real-time based on your mount's position, keeping your physical horizon level. Handles meridian flips automatically.
+* **Interactive Live Zoom:** Zoom in/out on the live webcam feed (from 1.0x to 3.0x) using a dedicated slider, making fine-grained landmark target clicks much easier without losing co-alignment alignment.
 
 ### 🗺️ Interactive Sky Dome Radar
 * **Shaded Obstruction Zone:** Displays a smooth, shaded representation of your blocked low-altitude sky.

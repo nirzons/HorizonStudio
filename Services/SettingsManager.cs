@@ -42,6 +42,7 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
         private string _visualFeedSource = "Webcam";
         private bool _isAutoExposureEnabled = true;
         private double _targetADU = 25000.0;
+        private double _zoomFactor = 1.0;
 
         public SettingsManager(IProfileService profileService) {
             _profileService = profileService;
@@ -192,6 +193,11 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
             set { if (_targetADU != value) { _targetADU = value; SaveSetting(nameof(TargetADU), value); OnPropertyChanged(); } }
         }
 
+        public double ZoomFactor {
+            get => _zoomFactor;
+            set { if (_zoomFactor != value) { _zoomFactor = value; SaveSetting(nameof(ZoomFactor), value); OnPropertyChanged(); } }
+        }
+
 
         private void LoadSettings() {
             try {
@@ -221,6 +227,7 @@ namespace NirZonshine.NINA.HorizonStudio.Services {
                 _visualFeedSource = _accessor.GetValueString(nameof(VisualFeedSource), "Webcam");
                 _isAutoExposureEnabled = _accessor.GetValueBoolean(nameof(IsAutoExposureEnabled), true);
                 _targetADU = _accessor.GetValueDouble(nameof(TargetADU), 25000.0);
+                _zoomFactor = _accessor.GetValueDouble(nameof(ZoomFactor), 1.0);
 
                 OnPropertyChanged(string.Empty);
             } catch (Exception ex) {

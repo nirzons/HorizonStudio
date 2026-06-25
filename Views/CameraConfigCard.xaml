@@ -7,6 +7,8 @@
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <!-- Premium readable header text color for dark panels -->
+        <SolidColorBrush x:Key="HeaderForegroundBrush" Color="#A5B4FC" />
         <Style x:Key="ActionBtnStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontWeight" Value="Bold" />
@@ -127,7 +129,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="UVC Webcam Configuration" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="0" Text="UVC Webcam Configuration" FontSize="12" FontWeight="Bold" Foreground="{StaticResource HeaderForegroundBrush}" VerticalAlignment="Center" />
                     
                     <!-- Webcam State Status Badge -->
                     <Border Grid.Column="1" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="6,2" VerticalAlignment="Center">
@@ -163,6 +165,18 @@
                     <Button Grid.Column="0" Style="{StaticResource ActionBtnStyle}" Content="Start Video Feed" Command="{Binding StartWebcamCommand}" Height="28" Background="#6366F1" Margin="0,0,4,0" FontSize="11" />
                     <Button Grid.Column="1" Style="{StaticResource ActionBtnStyle}" Content="Stop Video Feed" Command="{Binding StopWebcamCommand}" Height="28" Background="#EF4444" Margin="4,0,0,0" FontSize="11" />
                 </Grid>
+
+                <!-- Zoom Slider (Scale factor 1.0x to 3.0x) -->
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="🔍 Feed Zoom" FontSize="10" Foreground="DarkGray" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <Slider Grid.Column="1" Value="{Binding Webcam.ZoomFactor, UpdateSourceTrigger=PropertyChanged}" Minimum="1.0" Maximum="3.0" TickFrequency="0.1" IsSnapToTickEnabled="True" Height="20" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding Webcam.ZoomFactor, StringFormat={}{0:F1}x}" FontSize="9.5" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" Margin="8,0,0,0" Width="30" TextAlignment="Right" />
+                </Grid>
             </StackPanel>
         </Border>
 
@@ -185,7 +199,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Main Camera Configuration" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="0" Text="Main Camera Configuration" FontSize="12" FontWeight="Bold" Foreground="{StaticResource HeaderForegroundBrush}" VerticalAlignment="Center" />
                     
                     <!-- Main Camera State Status Badge -->
                     <Border Grid.Column="1" CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="6,2" VerticalAlignment="Center">
@@ -353,7 +367,7 @@
                 </Style>
             </Border.Style>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Webcam Co-Alignment Assistant" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                <TextBlock Text="Webcam Co-Alignment Assistant" FontSize="12" FontWeight="Bold" Foreground="{StaticResource HeaderForegroundBrush}" Margin="0,0,0,8" />
                 
                 <!-- Co-Alignment Instruction Tip -->
                 <Border CornerRadius="4" Background="#111115" BorderThickness="1" BorderBrush="#222228" Padding="8" Margin="0,0,0,8">

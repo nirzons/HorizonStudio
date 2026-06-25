@@ -86,6 +86,11 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                     RaisePropertyChanged(nameof(IsWebcamActive));
                     RaisePropertyChanged(nameof(CanStartWebcam));
                     RaisePropertyChanged(nameof(CanStopWebcam));
+                    
+                    UpdateRotationAngle();
+                    RaisePropertyChanged(nameof(AlignmentTranslationX));
+                    RaisePropertyChanged(nameof(AlignmentTranslationY));
+
                     _parent.Camera.NotifyVisualFeedSourceChanged();
                     
                     if (value == "MainCamera") {
@@ -221,6 +226,14 @@ namespace NirZonshine.NINA.HorizonStudio.ViewModels {
                 _parent.SettingsManager.CameraRotationOffset = value;
                 RaisePropertyChanged(nameof(CameraRotationOffset));
                 UpdateRotationAngle();
+            }
+        }
+
+        public double ZoomFactor {
+            get => _parent.SettingsManager.ZoomFactor;
+            set {
+                _parent.SettingsManager.ZoomFactor = value;
+                RaisePropertyChanged(nameof(ZoomFactor));
             }
         }
 

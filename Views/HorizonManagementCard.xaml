@@ -6,6 +6,8 @@
     xmlns:views="clr-namespace:NirZonshine.NINA.HorizonStudio.Views">
 
     <UserControl.Resources>
+        <!-- Premium readable header text color for dark panels -->
+        <SolidColorBrush x:Key="HeaderForegroundBrush" Color="#A5B4FC" />
         <Style x:Key="ActionBtnStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontWeight" Value="Bold" />
@@ -39,7 +41,7 @@
         <!-- Section 1: Mount Jogging & Slewing -->
         <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Mount Jogging &amp; Slewing" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                <TextBlock Text="Mount Jogging &amp; Slewing" FontSize="12" FontWeight="Bold" Foreground="{StaticResource HeaderForegroundBrush}" Margin="0,0,0,8" />
                 
                 <!-- 5x5 Directional Jogging Grid -->
                 <Grid Width="180" Height="150" HorizontalAlignment="Center">
@@ -227,7 +229,7 @@
         <!-- Section 3: Horizon Pin Placement -->
         <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Horizon Pin Placement" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                <TextBlock Text="Horizon Pin Placement" FontSize="12" FontWeight="Bold" Foreground="{StaticResource HeaderForegroundBrush}" Margin="0,0,0,8" />
                 
                 <Grid>
                     <Grid.RowDefinitions>
@@ -458,7 +460,7 @@
         <!-- Section 5: Profile Storage -->
         <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,12">
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Profile Storage" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                <TextBlock Text="Profile Storage" FontSize="12" FontWeight="Bold" Foreground="{StaticResource HeaderForegroundBrush}" Margin="0,0,0,8" />
                 
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -474,7 +476,7 @@
         <!-- Section 6: Hardware & Safety Settings -->
         <Border CornerRadius="8" Background="#1A1A20" BorderThickness="1" BorderBrush="#2D2D35" Padding="12" Margin="0,0,0,8">
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="Hardware &amp; Safety Settings" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,8" />
+                <TextBlock Text="Hardware &amp; Safety Settings" FontSize="12" FontWeight="Bold" Foreground="{StaticResource HeaderForegroundBrush}" Margin="0,0,0,8" />
                 
                 <Grid Margin="0,0,0,8">
                     <Grid.RowDefinitions>

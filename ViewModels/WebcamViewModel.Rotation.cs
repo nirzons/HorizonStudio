@@ -4,6 +4,11 @@ using NINA.Core.Utility;
 namespace NirZonshine.NINA.HorizonStudio.ViewModels {
     public partial class WebcamViewModel {
         public void UpdateRotationAngle() {
+            if (IsMainCameraFeedSelected) {
+                WebcamImageRotationAngle = 0.0;
+                return;
+            }
+
             if (IsCoAligning) {
                 WebcamImageRotationAngle = 0.0;
                 return;

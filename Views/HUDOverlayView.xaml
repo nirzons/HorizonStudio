@@ -76,6 +76,7 @@
                         <Grid.RenderTransform>
                             <TransformGroup>
                                 <TranslateTransform X="{Binding AlignmentTranslationX}" Y="{Binding AlignmentTranslationY}" />
+                                <ScaleTransform ScaleX="{Binding ZoomFactor}" ScaleY="{Binding ZoomFactor}" CenterX="300" CenterY="300" />
                                 <RotateTransform CenterX="300" CenterY="300" Angle="{Binding WebcamImageRotationAngle}" />
                             </TransformGroup>
                         </Grid.RenderTransform>
@@ -122,6 +123,10 @@
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding IsCoAligning}" Value="True">
                                                 <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <!-- Hide co-alignment reticle if main camera feed is selected -->
+                                            <DataTrigger Binding="{Binding IsMainCameraFeedSelected}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>

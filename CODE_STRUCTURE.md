@@ -86,7 +86,7 @@ Horizon Studio/
 │   ├── HorizonMapperDockableVM.State.cs      # Tick timer polling & hardware connections
 │   │
 │   ├── CameraViewModel.cs         # Looping exposure controls, auto-exposure, star counts
-│   ├── WebcamViewModel.cs         # Webcam streams, alignment ratios, and co-alignment
+│   ├── WebcamViewModel.cs         # Webcam streams, alignment ratios, zoom, and co-alignment
 │   ├── WebcamViewModel.Rotation.cs # Parallactic angle calculations & field rotation
 │   ├── RadarViewModel.cs          # Calculates polar mappings & coordinate traces
 │   ├── LandmarkViewModel.cs       # Stores collections and active sync state workflows
@@ -125,7 +125,7 @@ Rather than relying on a giant monolithic interface, the UI is split into visual
 Employs **ViewModel Composition** (Composition VM pattern) to split large logic blocks while preserving clean state-forwarding:
 * **`HorizonMapperDockableVM` (Root)**: Composes N.I.N.A. system mediators (Camera, Telescope, Profile) and exposes them to sub-VMs. Spreads settings and state timers through partial classes.
 * **`CameraViewModel`**: Controls looping exposures, automatically calculates ADU changes, and initiates star count and HFR detection via N.I.N.A. core engines.
-* **`WebcamViewModel` & `WebcamViewModel.Rotation`**: Connects DirectShow streams and computes real-time field rotation using observer latitude, mount Alt/Az coordinates, and physical pier side telemetry.
+* **`WebcamViewModel` & `WebcamViewModel.Rotation`**: Connects DirectShow streams, manages zoom states, and computes real-time field rotation using observer latitude, mount Alt/Az coordinates, and physical pier side telemetry.
 * **`RadarViewModel`**: Calculates the coordinates representing 2D polar projection points:
   $$x = x_{\text{center}} + r \cdot \sin(\theta), \quad y = y_{\text{center}} - r \cdot \cos(\theta)$$
   interpolating Alt/Az obstructions smoothly clockwise.
