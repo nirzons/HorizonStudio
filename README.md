@@ -14,7 +14,9 @@ The plugin is designed around four key core capabilities:
    * *Fallback Main Camera Support:* For setups without a webcam (or for users who choose not to add one to their rigs), you can use your main astronomical imaging camera to capture looping exposure feeds with auto-exposure ADU scaling and a real-time star-count overlay.
 2. **Alt-Az Jogging Simulation on Equatorial Mounts:** Tracing a level horizon with an equatorial mount is notoriously difficult because standard mount controls move along RA/Dec lines (which tilt across the sky). Horizon Studio handles this by simulating Alt-Az steps—giving you a virtual **5x5 Jog Grid** that moves the mount directly along altitude and azimuth vectors by automatically translating Alt-Az coordinates in real-time, allowing you to walk levelly across roof lines and tree lines.
 3. **Interactive Sky Dome & Eyepiece Mapping:** Features a circular telescope eyepiece HUD view and a 2D Polar Sky Dome Radar. You can double-click anywhere on the eyepiece overlay or click on the radar to slew directly to that sky position. You can easily select, add, or delete nodes, and step through them sequentially clockwise (`Slew CW ▶`) or counter-clockwise (`◀ Slew CCW`) by azimuth proximity.
-4. **3D Profile Warping & 3D Tilt Correction (Align & Calibrate):** *One of the plugin's most powerful capabilities.* Tracing a horizon is best done during the day when obstructions are clearly visible, but polar aligning your mount at night shifts the coordinate grid, meaning your saved profile no longer matches the sky. **3D Tilt Correction** allows you to automatically warp, tilt, and shift the entire horizon profile based on a single reference point (either a saved horizon pin or a collection of permanent terrestrial landmarks).
+4. **3D Profile Warping & 3D Tilt Correction (Align & Calibrate):** *One of the plugin's most powerful capabilities.* Tracing a horizon is best done during the day when obstructions are clearly visible, but polar aligning your mount at night shifts the coordinate grid, meaning your saved profile no longer matches the sky. **3D Tilt Correction** allows you to automatically warp, tilt, and shift the entire horizon profile based on:
+   - **Horizon Sync (using a saved horizon pin)** or **Landmark Sync (using permanent landmarks)**: Perfect for when you load a saved horizon profile from a previous session and the physical setup has changed (e.g., the tripod legs were placed slightly differently, introducing a new physical tilt and rotation).
+   - **Polar Alignment Sync (Auto-Detect)**: Automatically retrieves polar alignment errors from N.I.N.A. logs to warp the profile. *Note: This method is only valid if the horizon profile was built/edited and polar alignment was completed during the same session without physically moving the mount/tripod (i.e. calibrating the refined polar axis on the exact same physical footing).*
 
 ---
 
@@ -34,6 +36,7 @@ The plugin is designed around four key core capabilities:
   $$\Delta\text{Alt}_{\text{warp}} = \Delta\text{Alt}_{\text{ref}} \cdot \cos\left((\text{NodeAz} - \text{RefAz}) \cdot \frac{\pi}{180^\circ}\right)$$
 * **Horizon Sync:** Select any existing horizon pin, slew to it, center the physical obstruction in your eyepiece, and calibrate the entire profile.
 * **Landmark Sync:** Save permanent terrestrial landmarks (e.g. antenna tips, church steeples) that sit above/below the horizon, and use them to recalibrate the profile in future sessions (e.g., after polar alignment or mount teardown).
+* **Polar Alignment Sync (Auto-Detect):** Scans N.I.N.A. log files to auto-detect alignment errors calculated by polar alignment plugins (such as Three Point Polar Alignment or 2-Point Polar Alignment) and automatically warps the entire profile to match the aligned sky.
 
 ### 🕹️ Interactive Eyepiece View & Click-to-Slew
 * **Circular Eyepiece HUD:** Clips the camera view into a clean telescope eyepiece circular overlay.
@@ -88,7 +91,7 @@ The plugin is designed around four key core capabilities:
 ### 3. Warp & Align Profiles (3D Tilt Correction)
 The most common workflow is to build your horizon profile during the daytime — when you can clearly see trees, rooftops, and other obstructions — before your mount is polar-aligned. Once you perform polar alignment, the mount will inevitably shift, and your saved profile will no longer match the sky. **3D Tilt Correction** allows you to warp and re-align the entire profile using a single reference point. It is also useful if the webcam co-alignment was skipped or done poorly, introducing a systematic offset into the profile, or if you have physically repositioned your mount since the profile was originally built. In either case, 3D Tilt Correction serves as a quick preliminary correction before fine-tuning individual nodes.
 
-Horizon Studio supports two synchronization methods: **Horizon Sync** and **Landmark Sync**.
+Horizon Studio supports three synchronization methods: **Horizon Sync**, **Landmark Sync**, and **Polar Alignment Sync**.
 
 #### Method A: Horizon Sync (Using a Horizon Pin)
 Use this if you want to align your profile using a physical feature that is already part of your horizon line (e.g., a specific chimney or post).
@@ -121,6 +124,23 @@ Use this if you want to align your profile using one or more highly striking ref
    * Look at your camera feed and manually jog the mount to center the physical landmark under the crosshairs.
    * Once you jog the mount past the safety threshold ($0.05^\circ$), click **Confirm Sync**. The entire horizon profile (and all other landmarks in the collection) will shift and warp to match your new alignment!
    * Save your horizon profile to update the coordinates for all landmarks.
+
+---
+
+#### Method C: Polar Alignment Sync (Auto-Detect)
+Use this if you have just completed polar alignment in your session and want to automatically align your horizon profile to the new coordinates without manual target syncing.
+
+> [!IMPORTANT]
+> **When to use Polar Alignment Sync vs. Landmark/Horizon Sync:**
+> - **Use Polar Alignment Sync (Method C)** only if you built or edited the horizon profile during the day, and then performed polar alignment *at the exact same physical location without moving the tripod/mount* (e.g. during a single, continuous session on the same physical footing). In this case, the coordinate shift is strictly the polar alignment error of the mount's axes, which the plugin can read from the logs and correct automatically.
+> - **Do NOT use Method C** if you are loading a saved horizon profile from a previous session where the mount/tripod has since been torn down, moved, or setup again (even slightly). Physical differences in tripod leveling and leg placement introduce complex shifts that log-based polar error cannot account for. In these cases, you **must** use **Horizon Sync (Method A)** or **Landmark Sync (Method B)** to calibrate the profile using a physical visual reference.
+
+1. Complete a polar alignment run using N.I.N.A.'s *Three Point Polar Alignment* (TPPA) or *2-Point Polar Alignment* (2PPA) plugins.
+2. In Horizon Studio, load your horizon profile `.hrz` file.
+3. Click the **Auto-Detect Polar Offset** button. The plugin will scan your recent N.I.N.A. log files (from the last 6 hours) to automatically retrieve the calculated Alt/Az alignment errors.
+4. Click **Apply Polar Sync**.
+5. Review the calculated correction coordinates in the confirmation pop-up.
+6. Click **Yes** to warp the entire profile to match your new polar aligned coordinates.
 
 ---
 
