@@ -2,53 +2,56 @@
 
 **Horizon Studio** is a professional-grade tool for creating, editing, and calibrating local horizon profiles in Nighttime Imaging 'N' Astronomy (N.I.N.A.).
 
-Instead of guessing where trees, rooftops, or distant mountains intersect the night sky, Horizon Studio allows you to trace your actual, physical horizon using a live video feed, generating a native `.hrz` file that prevents your telescope from slewing into obstructions.
+---
+
+## 📖 Introduction & Core Architecture
+
+Traditional methods of mapping a local horizon require guessing where trees, rooftops, or distant mountains intersect the night sky. Horizon Studio eliminates this guesswork by allowing you to trace your actual, physical horizon using a live video feed, generating a native N.I.N.A. `.hrz` file that prevents your telescope from slewing into obstructions.
+
+The plugin is designed around four key core capabilities:
+
+1. **Wide-Angle Webcam Integration (Primary Source):** Designed primarily to utilize a wide-angle USB webcam mounted parallel to your telescope. This provides immediate, real-time daylight spatial awareness of your local obstructions. It features **Equatorial Counter-Rotation** (compensating for field rotation in real-time as your mount slews, keeping the physical ground level) and **Interactive Live Zoom** (1.0x to 3.0x) for precise positioning.
+   * *Fallback Main Camera Support:* For setups without a webcam (or for users who choose not to add one to their rigs), you can use your main astronomical imaging camera to capture looping exposure feeds with auto-exposure ADU scaling and a real-time star-count overlay.
+2. **Alt-Az Jogging Simulation on Equatorial Mounts:** Tracing a level horizon with an equatorial mount is notoriously difficult because standard mount controls move along RA/Dec lines (which tilt across the sky). Horizon Studio handles this by simulating Alt-Az steps—giving you a virtual **5x5 Jog Grid** that moves the mount directly along altitude and azimuth vectors by automatically translating Alt-Az coordinates in real-time, allowing you to walk levelly across roof lines and tree lines.
+3. **Interactive Sky Dome & Eyepiece Mapping:** Features a circular telescope eyepiece HUD view and a 2D Polar Sky Dome Radar. You can double-click anywhere on the eyepiece overlay or click on the radar to slew directly to that sky position. You can easily select, add, or delete nodes, and step through them sequentially clockwise (`Slew CW ▶`) or counter-clockwise (`◀ Slew CCW`) by azimuth proximity.
+4. **3D Profile Warping & 3D Tilt Correction (Align & Calibrate):** *One of the plugin's most powerful capabilities.* Tracing a horizon is best done during the day when obstructions are clearly visible, but polar aligning your mount at night shifts the coordinate grid, meaning your saved profile no longer matches the sky. **3D Tilt Correction** allows you to automatically warp, tilt, and shift the entire horizon profile based on a single reference point (either a saved horizon pin or a collection of permanent terrestrial landmarks).
 
 ---
 
 ## ✨ Implemented Features
 
-### 🎥 Live Eyepiece & HUD Overlay
-* **Circular Eyepiece View:** Rotates and crops the live camera feed into a clean circular telescope eyepiece view, hiding tilted black borders during mount tracking.
-* **AR HUD Overlay:** Superimposes a transparent Sky Dome Radar grid, card directions, the mapped horizon line, and mount position directly over the live camera feed.
-* **Click-to-Slew:** Double-click near the horizon overlay line on the video feed to automatically slew your mount to that position.
-* **Active Point HUD:** A high-contrast, translucent panel in the top-left corner dynamically overlays the name and coordinates (Alt/Az) of your currently selected pin or landmark, keeping important telemetry always in view.
-
-### 📷 Main Camera Integration
-* **Live Main Camera Feed:** Use your primary imaging camera as the video source instead of (or alongside) a webcam, with full N.I.N.A. equipment integration via `IImagingMediator`.
-* **Auto-Exposure ADU Scaling:** Automatically adjusts exposure time to keep the image within an optimal ADU range, ensuring clear visibility in varying sky conditions.
-  * ⚠️ *Note: If mapping during the day, ensure an appropriate filter (like H-alpha) or short base exposure is active to prevent sensor saturation.*
-* **Real-Time Star Detection HUD:** A translucent eyepiece overlay displays live telemetry — star count, median HFR, and ADU level — so you can verify optical alignment at a glance.
-* **Camera Safety:** Implements hardware capture-block serialization and physical exposure aborts to prevent driver lockouts when stopping or switching feeds.
-
 ### 🔄 Webcam Co-Alignment, Rotation & Zoom
-* **Co-Alignment Assistant:** Center a landmark in your main imaging telescope, click the same target in the webcam feed, and the plugin locks the optical offset.
-* **Equatorial Counter-Rotation:** Automatically rotates the camera feed in real-time based on your mount's position, keeping your physical horizon level. Handles meridian flips automatically.
-* **Interactive Live Zoom:** Zoom in/out on the live webcam feed (from 1.0x to 3.0x) using a dedicated slider, making fine-grained landmark target clicks much easier without losing co-alignment alignment.
+* **Co-Alignment Assistant:** Sync the webcam's optical axis with your main telescope by centering a landmark in the main camera and clicking the same target in the webcam feed.
+* **Equatorial Counter-Rotation:** Computes parallactic angles dynamically using mount coordinates, pier side telemetry, and observer latitude to rotate the video feed in real-time, keeping the ground level.
+* **Interactive Live Zoom:** Magnify the live webcam feed from **1.0x to 3.0x** using a dedicated slider, making fine-grained landmark target clicks during co-alignment easy without affecting optical offset precision.
 
-### 🗺️ Interactive Sky Dome Radar
-* **Shaded Obstruction Zone:** Displays a smooth, shaded representation of your blocked low-altitude sky.
-* **Radar Slewing:** Click anywhere on the radar view to slew the mount to that sky position. Clicking near a saved node snaps selection to it.
-* **Active Point HUD:** Displays the name and exact Alt/Az coordinates of your active selection in the top-left corner.
+### 📐 Alt-Az Jogging Simulation
+* **5x5 Directional Jog Grid:** Move your telescope in precise altitude and azimuth increments. The plugin automatically converts Alt-Az steps into equatorial slews on the fly.
+* **Exact Position Micro-Jumps:** Automatically measures settling drift and applies a predictive lead to execute precise micro-adjustments, canceling out mount drift errors.
 
-### 🕹️ Verification & Traversal
-* **Traversal Controls:** Step through both your saved horizon nodes and terrestrial landmarks clockwise (`Slew CW ▶`) or counter-clockwise (`◀ Slew CCW`) by physical azimuth proximity, automatically updating the active selection.
-* **Safety Safeguards:** Disables jogging and traversal controls during active slews, and prompts for confirmation before performing any large azimuth moves (> 45°).
+### 🌐 3D Profile Warping & 3D Tilt Correction
+* **Profile Synchronization:** Warps the entire horizon profile dynamically using 3D cosine-tilt correction:
+  $$\Delta\text{Alt}_{\text{warp}} = \Delta\text{Alt}_{\text{ref}} \cdot \cos\left((\text{NodeAz} - \text{RefAz}) \cdot \frac{\pi}{180^\circ}\right)$$
+* **Horizon Sync:** Select any existing horizon pin, slew to it, center the physical obstruction in your eyepiece, and calibrate the entire profile.
+* **Landmark Sync:** Save permanent terrestrial landmarks (e.g. antenna tips, church steeples) that sit above/below the horizon, and use them to recalibrate the profile in future sessions (e.g., after polar alignment or mount teardown).
 
-### 🛠️ Horizon Pin Management
+### 🕹️ Interactive Eyepiece View & Click-to-Slew
+* **Circular Eyepiece HUD:** Clips the camera view into a clean telescope eyepiece circular overlay.
+* **Live AR Overlays:** Projects the polar radar grid, cardinal directions, active obstruction lines, and mount crosshairs directly onto the live feed.
+* **Click-to-Slew Navigation:** Double-click on the camera HUD or click on the Sky Dome Radar to slew the telescope.
+* **Sequential Traversal:** Step through saved pins and landmarks clockwise or counter-clockwise by physical azimuth proximity, automatically updating the active selection.
+
+### 📷 Main Camera Integration (Fallback Mode)
+* **Astronomical Camera Feeds:** Integrates with N.I.N.A.'s primary camera system to capture looping exposure feeds.
+* **Auto-Exposure ADU Scaling:** Automatically scales exposure times to maintain a targeted ADU brightness level.
+* **Star Detection Telemetry:** Computes and overlays star counts and median HFR (Half Flux Radius) on the live HUD in real-time.
+* **Aborts & Driver Protection:** Handles exposure interruptions and hardware serialization to protect camera drivers during feed transitions.
+
+### 🛠️ Horizon Pin Management & File Export
 * **Dynamic Pin Dropping:** Drop nodes at your mount's position to build the horizon profile in real-time. Pins are automatically kept sorted by Azimuth.
 * **Point Editing & Deletion:** Select any node to view its coordinates, slew to it, or delete it from the profile.
-
-### 🔷 Multiple Terrestrial Landmarks
-* **Terrestrial Landmarks Management:** Add and manage a collection of permanent landmarks (such as antennas, roof pinnacles, or mountain peaks) that are visible from your observing site.
-* **Dual Radar Visualization:** Landmarks are plotted as fuchsia diamonds (🔷) on both the Live View HUD and Sky Dome radars, displaying their custom names with active selection highlights.
-* **One-Click Traversal & Slew:** Select any landmark from the list or by clicking its diamond on the radars to slew directly to it, delete it, or rename it.
-* **Non-Obstruction Annotation:** Landmarks are stored as comment headers at the top of the `.hrz` file, maintaining 100% compatibility with native N.I.N.A. horizon files.
-
-### 🌌 SkySafari & Cartes du Ciel Compatibility
-* **SkySafari Horizon Image (.png) Export**: When clicking the standard **Save Horizon Profile** button, you can choose to save the profile as a **SkySafari Horizon Image (`.png`)**. This automatically generates a fully compliant 2048x1024 32-bit transparent equirectangular PNG, with your custom obstructions rendered as a 70% semi-transparent astronomical dark blue and bounded by a sharp solid red line.
-  * See our [SkySafari Setup Guide](SkySafari_Setup_Guide.md) for step-by-step instructions on transferring and activating the custom horizon on your Android/iOS device.
-* **Cartes du Ciel (CdC) Compatibility**: The standard `.hrz` horizon file generated by Horizon Studio is also fully compatible with **Cartes du Ciel**. You can load your `.hrz` profile directly into Cartes du Ciel (`Settings > Chart, coordinates > Horizon`) to visualize your local obstruction profile on your star charts.
+* **SkySafari PNG Export:** Save your profile as an equirectangular PNG, rendering your obstructions in 70% semi-transparent dark blue bounded by a solid red line for SkySafari mobile devices.
+* **Cartes du Ciel (CdC) Compatibility:** Standard `.hrz` profiles can be imported directly into Cartes du Ciel as a local horizon coordinate chart.
 
 ---
 
@@ -107,7 +110,7 @@ Use this if you want to align your profile using one or more highly striking ref
    * Slew your telescope and center a striking landmark under your camera crosshairs.
    * On the **🔷 SYNC LANDMARKS** card, click **➕ Add**. A new landmark will be created at your mount's current coordinates.
    * Repeat this for any other landmarks visible from your site.
-   * *(Optional)* Click **✏️ Rename** to give your landmarks custom names (e.g., `"Antena"`, `"Tree"`).
+   * *(Optional)* Click **✏️ Rename** to give your landmarks custom names (e.g., `"Antenna"`, `"Tree"`).
    * Click **Save Horizon Profile** to store all landmarks directly in the file.
 
 2. **Calibrating in a Future Session:**
